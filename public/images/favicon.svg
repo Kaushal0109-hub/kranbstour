@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="kb-fav-grad" x1="16" y1="0" x2="16" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#186961"/>
+      <stop offset="1" stop-color="#3db976"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="4" fill="url(#kb-fav-grad)"/>
+  <g fill="#fff">
+    <rect x="8" y="8" width="2.6" height="16" rx="0.5"/>
+    <path d="M10.6 16.2 20.8 8h3.2l-5.5 4.4 6.8-.1-1.2 2-5.6.2L10.6 16.2z"/>
+    <path d="M10.6 17.4 20 24h-3.4L10.6 19.2V24H8V8h2.6v9.4z"/>
+  </g>
+</svg>

@@ -4,8 +4,15 @@ namespace App\Services;
 
 use App\Helpers\MediaHelper;
 use App\Models\City;
+use App\Models\CmsPage;
+use App\Models\HomeHero;
 use App\Models\HomeHighlight;
+use App\Models\HomeProcessStep;
+use App\Models\HomePromoSection;
 use App\Models\HomeStat;
+use App\Models\Monument;
+use App\Models\SiteSetting;
+use App\Models\SocialLink;
 use App\Models\Testimonial;
 use App\Models\TourCategory;
 use App\Models\TourPackage;
@@ -85,6 +92,7 @@ class CatalogService
         }
 
         $package = $category->packages->firstWhere('slug', $packageSlug)
+            ?? $category->packages->first(fn (TourPackage $p) => TourCatalog::slugify($p->title) === $packageSlug)
             ?? TourPackage::query()
                 ->where('category_id', $category->id)
                 ->where('slug', $packageSlug)
@@ -95,12 +103,70 @@ class CatalogService
             return null;
         }
 
-        $package->load(['highlights', 'itineraries', 'inclusions', 'exclusions', 'faqs', 'locationTags']);
+        $package->load(['highlights', 'itineraries', 'inclusions', 'exclusions', 'faqs', 'locationTags', 'galleryImages', 'features', 'importantInfos']);
 
         return [
             'category' => MediaHelper::resolve($this->categoryToArray($category)),
             'package' => MediaHelper::resolve($this->enrichPackageFromDb($category, $package)),
             'package_model' => $package,
+        ];
+    }
+
+    public function findMonument(string $categorySlug, string $monumentSlug): ?array
+    {
+        if (! $this->useDatabase()) {
+            $category = $this->findCategory($categorySlug);
+            if (! $category) {
+                return null;
+            }
+
+            foreach ($category['monuments'] as $monument) {
+                $slug = $monument['slug'] ?? TourCatalog::slugify($monument['name']);
+                if ($slug === $monumentSlug) {
+                    return [
+                        'category' => $category,
+                        'monument' => MediaHelper::resolve(array_merge($monument, [
+                            'slug' => $slug,
+                            'desc' => $monument['desc'] ?? $monument['description'] ?? '',
+                        ])),
+                    ];
+                }
+            }
+
+            return null;
+        }
+
+        $category = TourCategory::query()
+            ->where('slug', $categorySlug)
+            ->where('is_active', true)
+            ->with('monuments')
+            ->first();
+
+        if (! $category) {
+            return null;
+        }
+
+        $monument = $category->monuments()
+            ->where('slug', $monumentSlug)
+            ->first()
+            ?? $category->monuments()->get()->first(
+                fn ($m) => TourCatalog::slugify($m->name) === $monumentSlug
+            );
+
+        if (! $monument) {
+            return null;
+        }
+
+        return [
+            'category' => MediaHelper::resolve($this->categoryToArray($category)),
+            'monument' => MediaHelper::resolve([
+                'id' => $monument->id,
+                'name' => $monument->name,
+                'slug' => $monument->slug,
+                'image' => $monument->image,
+                'desc' => $monument->description,
+                'description' => $monument->description,
+            ]),
         ];
     }
 
@@ -264,7 +330,7 @@ class CatalogService
                         'price' => $p->price_formatted,
                         'rating' => (float) $p->rating,
                         'tag' => $p->tag,
-                        'package_url' => TourCatalog::packageUrl($categorySlug, $p->title),
+                        'package_url' => TourCatalog::packageUrl($categorySlug, ['slug' => $p->slug, 'title' => $p->title]),
                     ])->all()
                     : [];
 
@@ -281,6 +347,7 @@ class CatalogService
                     'highlights' => $city->home_highlights ?? [],
                     'tour_count' => $city->tour_count_label,
                     'category_slug' => $categorySlug,
+                    'is_spotlight' => $city->is_spotlight,
                     'image' => [
                         'url' => $city->card_image ? MediaHelper::url($city->card_image) : ($images['cities'][$city->key]['card'] ?? ''),
                         'alt' => $alt,
@@ -321,7 +388,7 @@ class CatalogService
                     'rating' => (float) $package->rating,
                     'tag' => $package->tag,
                     'image' => $package->image ? MediaHelper::url($package->image) : MediaHelper::url($category->banner_image ?? ''),
-                    'package_url' => TourCatalog::packageUrl($category->slug, $package->title),
+                    'package_url' => TourCatalog::packageUrl($category->slug, ['slug' => $package->slug, 'title' => $package->title]),
                 ];
             })
             ->all();
@@ -334,6 +401,354 @@ class CatalogService
         }
 
         return TourCategory::query()->active()->pluck('slug')->all();
+    }
+
+    public function navTourLinks(): array
+    {
+        if (! $this->useDatabase()) {
+            return $this->fallbackNavLinks();
+        }
+
+        return TourCategory::query()
+            ->active()
+            ->where('show_in_nav', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn (TourCategory $cat) => [
+                'label' => $cat->nav_label ?: $cat->title,
+                'route' => $cat->route_name ?: TourCatalog::routeForSlug($cat->slug),
+            ])
+            ->all();
+    }
+
+    public function footerServiceLinks(): array
+    {
+        $links = $this->navTourLinks();
+        $links[] = ['label' => 'Tour Packages', 'route' => 'tours.packages'];
+
+        return $links;
+    }
+
+    public function footerCompanyLinks(): array
+    {
+        if (Schema::hasTable('cms_pages')) {
+            $pages = CmsPage::query()->active()->where('show_in_footer', true)->get();
+            if ($pages->isNotEmpty()) {
+                $links = $pages->map(fn (CmsPage $p) => [
+                    'label' => $p->title,
+                    'route' => $p->slug,
+                ])->all();
+
+                if (! collect($links)->contains(fn (array $l) => $l['route'] === 'blog')) {
+                    array_unshift($links, ['label' => 'Blog', 'route' => 'blog']);
+                }
+
+                return $links;
+            }
+        }
+
+        return [
+            ['label' => 'Blog', 'route' => 'blog'],
+            ['label' => 'About Us', 'route' => 'about'],
+            ['label' => 'Contact Us', 'route' => 'contact'],
+            ['label' => 'Our Awards', 'route' => 'awards'],
+        ];
+    }
+
+    public function socialLinks(): array
+    {
+        if (! Schema::hasTable('social_links') || ! SocialLink::query()->active()->exists()) {
+            return [
+                ['icon' => 'fab fa-youtube', 'label' => 'YouTube', 'url' => '#'],
+                ['icon' => 'fab fa-facebook-f', 'label' => 'Facebook', 'url' => '#'],
+                ['icon' => 'fab fa-instagram', 'label' => 'Instagram', 'url' => '#'],
+            ];
+        }
+
+        return SocialLink::query()->active()->get()
+            ->map(fn (SocialLink $s) => ['icon' => $s->icon, 'label' => $s->label, 'url' => $s->url ?? '#'])
+            ->all();
+    }
+
+    public function heroSection(): array
+    {
+        if (Schema::hasTable('home_heroes')) {
+            $hero = HomeHero::query()->where('is_active', true)->first();
+            if ($hero) {
+                return [
+                    'badge_text' => $hero->badge_text,
+                    'rating_text' => $hero->rating_text,
+                    'heading_line1' => $hero->heading_line1,
+                    'heading_line2' => $hero->heading_line2,
+                    'subtitle' => $hero->subtitle,
+                    'search_placeholder' => $hero->search_placeholder,
+                    'background_image' => $hero->background_image ? MediaHelper::url($hero->background_image) : null,
+                    'thumbnail_keys' => $hero->thumbnail_keys ?? ['agra', 'delhi', 'jaipur', 'varanasi'],
+                ];
+            }
+        }
+
+        $images = MediaHelper::resolve(config('site.images'));
+
+        return [
+            'badge_text' => 'Agra · Delhi · Jaipur · Varanasi',
+            'rating_text' => '4.9 · 2,260+ reviews',
+            'heading_line1' => "Discover India’s heritage",
+            'heading_line2' => 'with local experts',
+            'subtitle' => 'Private Taj Mahal sunrises, Old Delhi walks, Jaipur palaces & Varanasi Ganga aarti — curated by '.config('site.name').'.',
+            'search_placeholder' => 'Taj Mahal, Old Delhi, Jaipur...',
+            'background_image' => $images['hero']['main']['url'] ?? null,
+            'thumbnail_keys' => ['agra', 'delhi', 'jaipur', 'varanasi'],
+        ];
+    }
+
+    public function processSteps(): array
+    {
+        if (Schema::hasTable('home_process_steps') && HomeProcessStep::query()->active()->exists()) {
+            return HomeProcessStep::query()->active()->get()
+                ->map(fn (HomeProcessStep $s) => [
+                    'icon' => $s->icon,
+                    'color' => $s->color_classes,
+                    'num' => $s->step_number,
+                    'title' => $s->title,
+                    'text' => $s->text,
+                ])->all();
+        }
+
+        return [
+            ['icon' => 'fa-map-marked-alt', 'color' => 'bg-orange-50 border-orange-200 text-accent', 'num' => '01', 'title' => 'Pick your city', 'text' => 'Browse tours in Agra, Delhi, Jaipur or Varanasi.'],
+            ['icon' => 'fa-calendar-check', 'color' => 'bg-brand-50 border-brand-200 text-brand', 'num' => '02', 'title' => 'Select date & book', 'text' => 'Choose date, group size & extras. Instant confirmation.'],
+            ['icon' => 'fa-route', 'color' => 'bg-emerald-50 border-emerald-200 text-brand-700', 'num' => '03', 'title' => 'Explore with guide', 'text' => 'Your local guide handles transport, tickets & timing.'],
+        ];
+    }
+
+    public function promoSection(string $key): ?array
+    {
+        if (! Schema::hasTable('home_promo_sections')) {
+            return $this->fallbackPromo($key);
+        }
+
+        $section = HomePromoSection::getByKey($key);
+        if (! $section) {
+            return $this->fallbackPromo($key);
+        }
+
+        return [
+            'badge' => $section->badge,
+            'title' => $section->title,
+            'subtitle' => $section->subtitle,
+            'description' => $section->description,
+            'tags' => $section->tags ?? [],
+            'price_label' => $section->price_label,
+            'cta_label' => $section->cta_label,
+            'cta_route' => $section->cta_route,
+            'secondary_cta_label' => $section->secondary_cta_label,
+            'secondary_cta_route' => $section->secondary_cta_route,
+            'category_slug' => $section->category_slug,
+            'city_keys' => $section->city_keys ?? [],
+        ];
+    }
+
+    public function spotlightCities(): array
+    {
+        $cities = $this->homeCities();
+        if (empty($cities)) {
+            return [];
+        }
+
+        $spotlight = collect($cities)->filter(fn ($c) => ! empty($c['is_spotlight']));
+
+        if ($spotlight->isEmpty()) {
+            $spotlight = collect($cities)->whereIn('key', ['delhi', 'agra']);
+        }
+
+        return $spotlight->take(2)->map(fn ($city) => array_merge($city, [
+            'tours' => array_slice($city['tours'], 0, 2),
+        ]))->values()->all();
+    }
+
+    public function secondaryCities(): array
+    {
+        $cities = $this->homeCities();
+        if (empty($cities)) {
+            return [];
+        }
+
+        $secondary = collect($cities)->reject(fn ($c) => ! empty($c['is_spotlight']))->values();
+
+        if ($secondary->isEmpty()) {
+            $secondary = collect($cities)->reject(fn ($c) => in_array($c['key'], ['delhi', 'agra'], true));
+        }
+
+        return $secondary->take(2)->all();
+    }
+
+    public function cmsPage(string $slug): ?array
+    {
+        if (! Schema::hasTable('cms_pages')) {
+            return null;
+        }
+
+        $page = CmsPage::query()->where('slug', $slug)->where('is_active', true)->first();
+
+        return $page ? [
+            'slug' => $page->slug,
+            'title' => $page->title,
+            'heading' => $page->heading,
+            'content' => $page->content,
+        ] : null;
+    }
+
+    public function search(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return ['packages' => [], 'categories' => []];
+        }
+
+        if (! $this->useDatabase()) {
+            return $this->searchConfig($query);
+        }
+
+        $like = '%'.$query.'%';
+
+        $packages = TourPackage::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($like) {
+                $q->where('title', 'like', $like)
+                    ->orWhere('description', 'like', $like)
+                    ->orWhere('summary', 'like', $like);
+            })
+            ->with('category')
+            ->orderBy('sort_order')
+            ->limit(20)
+            ->get()
+            ->map(fn (TourPackage $p) => [
+                'title' => $p->title,
+                'duration' => $p->duration,
+                'price' => $p->price_formatted,
+                'rating' => (float) $p->rating,
+                'image' => $p->image ? MediaHelper::url($p->image) : null,
+                'category_slug' => $p->category->slug,
+                'url' => TourCatalog::packageUrl($p->category->slug, ['slug' => $p->slug, 'title' => $p->title]),
+            ])
+            ->all();
+
+        $categories = TourCategory::query()
+            ->active()
+            ->where(function ($q) use ($like) {
+                $q->where('title', 'like', $like)
+                    ->orWhere('city_name', 'like', $like)
+                    ->orWhere('description', 'like', $like);
+            })
+            ->limit(10)
+            ->get()
+            ->map(fn (TourCategory $c) => [
+                'title' => $c->title,
+                'city' => $c->city_name,
+                'url' => route($c->route_name ?: TourCatalog::routeForSlug($c->slug)),
+            ])
+            ->all();
+
+        return compact('packages', 'categories');
+    }
+
+    public function siteImages(): array
+    {
+        $images = config('site.images', []);
+        if (Schema::hasTable('site_settings')) {
+            $map = [
+                'hero.main.url' => 'hero_main_image',
+                'hero.main.alt' => 'hero_main_alt',
+                'fallback' => 'image_fallback',
+            ];
+            foreach ($map as $path => $key) {
+                $val = SiteSetting::get($key);
+                if ($val) {
+                    data_set($images, $path, $key === 'hero_main_image' || $key === 'image_fallback' ? $val : $val);
+                }
+            }
+            foreach (['logo_default', 'logo_white', 'logo_icon'] as $logoKey) {
+                if ($val = SiteSetting::get($logoKey)) {
+                    config(["site.logo.".str_replace('logo_', '', str_replace('_default', '', $logoKey)) => $val]);
+                }
+            }
+        }
+
+        return MediaHelper::resolve($images);
+    }
+
+    private function fallbackNavLinks(): array
+    {
+        return [
+            ['label' => 'Taj Mahal Tours', 'route' => 'tours.taj-mahal'],
+            ['label' => 'Jaipur Tours', 'route' => 'tours.jaipur'],
+            ['label' => 'New Delhi Tours', 'route' => 'tours.delhi'],
+            ['label' => 'Golden Triangle', 'route' => 'tours.golden-triangle'],
+            ['label' => 'Varanasi Tours', 'route' => 'tours.varanasi'],
+        ];
+    }
+
+    private function fallbackPromo(?string $key): ?array
+    {
+        return match ($key) {
+            'golden_triangle' => [
+                'badge' => 'Combo Package',
+                'title' => 'Golden Triangle: Delhi + Agra + Jaipur',
+                'subtitle' => null,
+                'description' => 'Cover all three royal & historic cities in one seamless journey — Taj Mahal, Delhi monuments & Jaipur palaces with private car, guide & flexible itinerary.',
+                'tags' => ['3 Cities', '3–7 Days', 'Private Car', 'From $8,500'],
+                'price_label' => 'From $8,500',
+                'cta_label' => 'View Golden Triangle Tours',
+                'cta_route' => 'tours.golden-triangle',
+                'category_slug' => 'golden-triangle',
+                'city_keys' => ['agra', 'delhi', 'jaipur'],
+            ],
+            'cta' => [
+                'badge' => 'Agra · Delhi · Jaipur · Varanasi',
+                'title' => 'Ready to explore India’s finest cities?',
+                'subtitle' => null,
+                'description' => 'Tell us which city you want to visit — custom quote within 2 hours, free cancellation on most tours.',
+                'cta_label' => 'Get a Free Quote',
+                'cta_route' => 'contact',
+                'secondary_cta_label' => 'Browse all tours',
+                'secondary_cta_route' => 'tours.packages',
+            ],
+            'spotlight' => [
+                'badge' => 'Delhi & Agra',
+                'title' => 'Where most travelers start',
+                'subtitle' => 'Capital heritage meets the Taj — our two most booked destinations',
+            ],
+            'story' => [
+                'badge' => 'Why '.config('site.name').'?',
+                'title' => 'Your trusted North India tour partner',
+                'subtitle' => 'Local experts, private tours & honest pricing — everything you need for a hassle-free trip.',
+            ],
+            default => null,
+        };
+    }
+
+    private function searchConfig(string $query): array
+    {
+        $q = strtolower($query);
+        $packages = $this->allPackages()->filter(function ($p) use ($q) {
+            return str_contains(strtolower($p['title']), $q)
+                || str_contains(strtolower($p['city'] ?? ''), $q);
+        })->take(20)->map(fn ($p) => array_merge($p, [
+            'url' => TourCatalog::packageUrl($p['category_slug'], ['slug' => $p['slug'], 'title' => $p['title']]),
+        ]))->values()->all();
+
+        $categories = $this->categories()->filter(function ($cat, $slug) use ($q) {
+            return str_contains(strtolower($cat['title'] ?? ''), $q)
+                || str_contains(strtolower($cat['city'] ?? ''), $q)
+                || str_contains($slug, $q);
+        })->map(fn ($cat, $slug) => [
+            'title' => $cat['title'],
+            'city' => $cat['city'],
+            'url' => route(TourCatalog::routeForSlug($slug)),
+        ])->values()->all();
+
+        return compact('packages', 'categories');
     }
 
     private function categoryToArray(TourCategory $cat): array
@@ -354,17 +769,21 @@ class CatalogService
             'tour_count' => $cat->tour_count_label,
             'monuments' => $cat->monuments->map(fn ($m) => [
                 'name' => $m->name,
+                'slug' => $m->slug,
                 'image' => $m->image,
                 'desc' => $m->description,
+                'url' => TourCatalog::monumentUrl($cat->slug, ['slug' => $m->slug, 'name' => $m->name]),
             ])->values()->all(),
             'tours' => $cat->packages->map(fn (TourPackage $p) => [
                 'title' => $p->title,
+                'slug' => $p->slug,
                 'duration' => $p->duration,
                 'price' => $p->price_formatted,
                 'rating' => (float) $p->rating,
                 'tag' => $p->tag,
                 'image' => $p->image,
                 'highlights' => $p->highlights()->pluck('text')->all(),
+                'url' => TourCatalog::packageUrl($cat->slug, ['slug' => $p->slug, 'title' => $p->title]),
             ])->values()->all(),
         ];
     }
@@ -422,6 +841,29 @@ class CatalogService
 
         if ($category->map_query) {
             $enriched['map_query'] = $category->map_query;
+        }
+
+        if ($package->galleryImages->isNotEmpty()) {
+            $enriched['gallery'] = MediaHelper::resolve($package->galleryImages->map(fn ($g) => [
+                'src' => $g->image,
+                'alt' => $g->alt ?? $package->title,
+            ])->all());
+        }
+
+        if ($package->features->isNotEmpty()) {
+            $enriched['features'] = $package->features->map(fn ($f) => [
+                'icon' => $f->icon,
+                'color' => $f->color_classes,
+                'title' => $f->title,
+                'desc' => $f->description,
+            ])->all();
+        }
+
+        if ($package->importantInfos->isNotEmpty()) {
+            $enriched['important_info'] = $package->importantInfos
+                ->groupBy('heading')
+                ->map(fn ($items) => $items->pluck('item_text')->all())
+                ->all();
         }
 
         $enriched['id'] = $package->id;

@@ -65,7 +65,7 @@ return [
             'title' => 'Jaipur Tours',
             'heading' => 'Jaipur Pink City Tours',
             'tagline' => 'The Pink City',
-            'icon' => 'fa-fort-awesome',
+            'icon' => 'fas fa-landmark',
             'description' => 'Walk through royal palaces, Amber Fort, Hawa Mahal, City Palace & vibrant bazaars in Rajasthan\'s pink capital.',
             'banner' => 'cities/jaipur-banner.jpg',
             'card' => 'cities/jaipur-card.jpg',

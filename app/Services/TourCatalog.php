@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\CurrencyHelper;
 use App\Helpers\MediaHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -26,6 +27,11 @@ class TourCatalog
     public static function findPackage(string $categorySlug, string $packageSlug): ?array
     {
         return app(CatalogService::class)->findPackage($categorySlug, $packageSlug);
+    }
+
+    public static function findMonument(string $categorySlug, string $monumentSlug): ?array
+    {
+        return app(CatalogService::class)->findMonument($categorySlug, $monumentSlug);
     }
 
     public static function allPackages(): Collection
@@ -97,11 +103,39 @@ class TourCatalog
         };
     }
 
-    public static function packageUrl(string $categorySlug, string $packageTitle): string
+    public static function packageUrl(string $categorySlug, array|string $packageOrTitle, ?string $slug = null): string
     {
+        if (is_array($packageOrTitle)) {
+            $packageSlug = $packageOrTitle['slug'] ?? self::slugify($packageOrTitle['title'] ?? '');
+        } else {
+            $packageSlug = $slug ?? self::slugify($packageOrTitle);
+        }
+
         return route('tours.package', [
             'category' => $categorySlug,
-            'packageSlug' => self::slugify($packageTitle),
+            'packageSlug' => $packageSlug,
+        ]);
+    }
+
+    public static function monumentUrl(string $categorySlug, array|string $monumentOrName, ?string $slug = null): string
+    {
+        if (is_array($monumentOrName)) {
+            $monumentSlug = $monumentOrName['slug'] ?? self::slugify($monumentOrName['name'] ?? '');
+        } else {
+            $monumentSlug = $slug ?? self::slugify($monumentOrName);
+        }
+
+        return route('tours.monument', [
+            'category' => $categorySlug,
+            'monumentSlug' => $monumentSlug,
+        ]);
+    }
+
+    public static function bookUrl(string $categorySlug, string $packageSlug): string
+    {
+        return route('tours.book', [
+            'category' => $categorySlug,
+            'packageSlug' => $packageSlug,
         ]);
     }
 
@@ -130,7 +164,7 @@ class TourCatalog
     private static function packageSummary(array $category, array $package): string
     {
         return "{$package['title']} is a {$package['duration']} tour in {$category['city']} with skip-the-line access and pickup from your hotel or airport. "
-            .'Prices start from ₹'.$package['price'].' per person with free cancellation up to 24 hours in advance.';
+            .CurrencyHelper::startingFrom(null, $package['price']).' per person with free cancellation up to 24 hours in advance.';
     }
 
     private static function packageDescription(array $category, array $package): string

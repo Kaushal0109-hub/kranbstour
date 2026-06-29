@@ -17,6 +17,23 @@ return [
 
     'cities' => ['agra', 'delhi', 'jaipur', 'varanasi'],
 
+    'currency' => [
+        'code' => 'USD',
+        'symbol' => '$',
+        'starting_from' => 'Starting from',
+    ],
+
+    'maps' => [
+        'google_api_key' => env('GOOGLE_MAPS_API_KEY', ''),
+    ],
+
+    'paypal' => [
+        'enabled' => false,
+        'mode' => 'sandbox',
+        'client_id' => '',
+        'client_secret' => '',
+    ],
+
     'images' => [
         'hero' => [
             'main' => [

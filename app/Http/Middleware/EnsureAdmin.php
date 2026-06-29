@@ -12,7 +12,7 @@ class EnsureAdmin
     {
         if (! $request->user()?->isAdmin()) {
             if ($request->user()?->isCustomer()) {
-                return redirect()->route('dashboard')->with('error', 'You do not have admin access.');
+                return redirect()->route('dashboard.index')->with('error', 'You do not have admin access.');
             }
 
             return redirect()->route('admin.login');

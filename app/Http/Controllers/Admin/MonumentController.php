@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesImageUploads;
 use App\Http\Controllers\Controller;
 use App\Models\Monument;
 use App\Models\TourCategory;
@@ -11,6 +12,7 @@ use Illuminate\View\View;
 
 class MonumentController extends Controller
 {
+    use HandlesImageUploads;
     public function index(Request $request): View
     {
         $query = Monument::query()->with('category')->orderBy('sort_order');
@@ -50,7 +52,7 @@ class MonumentController extends Controller
 
     public function update(Request $request, Monument $monument): RedirectResponse
     {
-        $monument->update($this->validated($request));
+        $monument->update($this->validated($request, $monument));
 
         return redirect()->route('admin.master.monuments.index')->with('success', 'Monument updated successfully.');
     }
@@ -62,7 +64,7 @@ class MonumentController extends Controller
         return back()->with('success', 'Monument deleted.');
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?Monument $monument = null): array
     {
         $data = $request->validate([
             'category_id' => ['required', 'exists:tour_categories,id'],
@@ -74,6 +76,6 @@ class MonumentController extends Controller
 
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
-        return $data;
+        return $this->mergeUploadedImages($request, $data, ['image'], 'monuments', $monument);
     }
 }

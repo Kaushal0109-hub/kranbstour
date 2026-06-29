@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesImageUploads;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +11,7 @@ use Illuminate\View\View;
 
 class CityController extends Controller
 {
+    use HandlesImageUploads;
     public function index(): View
     {
         return view('admin.master.cities.index', [
@@ -73,6 +75,6 @@ class CityController extends Controller
         $data['is_active'] = $request->boolean('is_active', true);
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
-        return $data;
+        return $this->mergeUploadedImages($request, $data, ['card_image', 'banner_image'], 'cities', $city);
     }
 }

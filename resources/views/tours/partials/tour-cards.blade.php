@@ -20,8 +20,11 @@
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             @foreach ($tour['tours'] as $package)
+                @php
+                    $packageUrl = $package['url'] ?? TourCatalog::packageUrl($tour['slug'], $package);
+                @endphp
                 <article class="tour-card card-hover bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft flex flex-col">
-                    <div class="relative aspect-[16/10] overflow-hidden bg-slate-200">
+                    <a href="{{ $packageUrl }}" class="relative aspect-[16/10] overflow-hidden bg-slate-200 block group">
                         <x-site-image :src="$package['image']" :alt="$package['title']" width="600" height="375"
                                       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         @if ($package['tag'])
@@ -32,7 +35,7 @@
                         <span class="absolute bottom-3 right-3 bg-ink/75 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-md">
                             {{ $package['duration'] }}
                         </span>
-                    </div>
+                    </a>
 
                     <div class="p-5 flex flex-col flex-1">
                         <div class="flex items-center justify-between gap-2 mb-2">
@@ -40,7 +43,9 @@
                                 <i class="fas fa-star text-[9px]" aria-hidden="true"></i>{{ $package['rating'] }}
                             </span>
                         </div>
-                        <h3 class="font-bold text-ink text-base leading-snug mb-3 flex-1">{{ $package['title'] }}</h3>
+                        <h3 class="font-bold text-ink text-base leading-snug mb-3 flex-1">
+                            <a href="{{ $packageUrl }}" class="hover:text-brand transition-colors">{{ $package['title'] }}</a>
+                        </h3>
 
                         @if (!empty($package['highlights']))
                             <ul class="flex flex-wrap gap-1.5 mb-4">
@@ -51,11 +56,8 @@
                         @endif
 
                         <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
-                            <p class="text-xl font-extrabold text-ink">
-                                ₹{{ $package['price'] }}
-                                <span class="text-xs font-normal text-ink-muted">/person</span>
-                            </p>
-                            <a href="{{ TourCatalog::packageUrl($tour['slug'], $package['title']) }}"
+                            <x-tour-price :display="$package['price']" />
+                            <a href="{{ $packageUrl }}"
                                class="bg-brand hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
                                 View Details
                             </a>

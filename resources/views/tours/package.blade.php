@@ -1,24 +1,33 @@
 @extends('layouts.app')
 
-@section('body_class', 'bg-white')
+@section('body_class', 'bg-white pkg-detail-page')
 
 @section('title', $package['title'] . ' — ' . config('site.name'))
 @section('meta_description', \Illuminate\Support\Str::limit($package['description'], 160))
 
 @section('content')
 @php
+    use App\Helpers\MediaHelper;
+
     $gallery = $package['gallery'] ?? [];
-    $mainImage = $gallery[0] ?? ['src' => $package['image'], 'alt' => $package['title']];
-    $thumbImages = array_slice($gallery, 1, 4);
-    while (count($thumbImages) < 4) {
-        $thumbImages[] = $mainImage;
+    $galleryItems = ! empty($gallery)
+        ? $gallery
+        : [['src' => $package['image'], 'alt' => $package['title']]];
+    $lightboxImages = collect($galleryItems)->map(fn ($item) => [
+        'url' => MediaHelper::url($item['src'] ?? $package['image']),
+        'alt' => $item['alt'] ?? $package['title'],
+    ])->values()->all();
+    $mainImage = $galleryItems[0];
+    $displayThumbs = array_slice($galleryItems, 1, 4);
+    while (count($displayThumbs) < 4) {
+        $displayThumbs[] = $galleryItems[0];
     }
-    $extraCount = max(0, count($gallery) - 5);
+    $extraCount = max(0, count($galleryItems) - 5);
     $categoryRoute = \App\Services\TourCatalog::routeForSlug($categorySlug);
     $tagColors = ['bg-sky-50 text-sky-700', 'bg-emerald-50 text-emerald-700', 'bg-teal-50 text-teal-700', 'bg-violet-50 text-violet-700'];
 @endphp
 
-<div class="bg-white pt-2 pb-16 min-h-screen">
+<div class="bg-white pt-2 pb-28 lg:pb-16 min-h-screen">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {{-- Breadcrumb --}}
@@ -62,35 +71,95 @@
             </div>
         </div>
 
-        {{-- Gallery: main left + 2x2 thumbs right (reference) --}}
-        <div class="pkg-gallery-ref mb-8">
-            <div class="pkg-gallery-ref-main rounded-xl overflow-hidden bg-slate-100">
+        {{-- Gallery: main left + 2x2 thumbs right — click opens lightbox slider --}}
+        <div class="pkg-gallery-ref mb-8" data-pkg-gallery>
+            <button type="button"
+                    class="pkg-gallery-ref-main pkg-gallery-trigger rounded-xl overflow-hidden bg-slate-100 relative group cursor-zoom-in"
+                    data-lightbox-index="0"
+                    aria-label="View gallery image 1">
                 <x-site-image :src="$mainImage['src']" :alt="$mainImage['alt']" width="960" height="640" :eager="true"
-                              class="w-full h-full object-cover" />
-            </div>
+                              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                <span class="absolute bottom-3 right-3 bg-black/55 text-white text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i class="fas fa-expand mr-1" aria-hidden="true"></i> View
+                </span>
+            </button>
             <div class="pkg-gallery-ref-grid">
-                @foreach ($thumbImages as $i => $thumb)
-                    <div class="rounded-xl overflow-hidden bg-slate-100 relative min-h-0">
+                @foreach ($displayThumbs as $i => $thumb)
+                    @php $thumbIndex = min($i + 1, count($galleryItems) - 1); @endphp
+                    <button type="button"
+                            class="pkg-gallery-trigger rounded-xl overflow-hidden bg-slate-100 relative min-h-0 group cursor-zoom-in"
+                            data-lightbox-index="{{ $thumbIndex }}"
+                            aria-label="View gallery image {{ $thumbIndex + 1 }}">
                         <x-site-image :src="$thumb['src']" :alt="$thumb['alt']" width="400" height="300"
-                                      class="w-full h-full object-cover" />
+                                      class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                         @if ($i === 3 && $extraCount > 0)
-                            <div class="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg">
+                            <span class="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg pointer-events-none">
                                 +{{ $extraCount }}
-                            </div>
+                            </span>
                         @endif
-                    </div>
+                    </button>
                 @endforeach
             </div>
         </div>
+
+        {{-- Gallery lightbox (full-screen slider) --}}
+        <div id="pkg-lightbox"
+             class="pkg-lightbox hidden fixed inset-0 z-[120]"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Tour photo gallery"
+             data-tour-title="{{ $package['title'] }}"
+             hidden>
+            <div class="pkg-lightbox-backdrop absolute inset-0 bg-black/95"></div>
+
+            <header class="pkg-lightbox-header absolute top-0 inset-x-0 z-30 flex items-center justify-between gap-4 px-4 sm:px-6 py-4 bg-gradient-to-b from-black/80 to-transparent">
+                <p class="pkg-lightbox-title text-white text-sm sm:text-base font-semibold truncate pr-4">
+                    {{ $package['title'] }}
+                    <span class="pkg-lightbox-counter text-white/70 font-normal"> — Image 1 of {{ count($lightboxImages) }}</span>
+                </p>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button type="button" class="pkg-lightbox-zoom-in w-10 h-10 rounded-lg text-white/90 hover:bg-white/10 flex items-center justify-center" aria-label="Zoom in">
+                        <i class="fas fa-search-plus" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="pkg-lightbox-zoom-out w-10 h-10 rounded-lg text-white/90 hover:bg-white/10 flex items-center justify-center" aria-label="Zoom out">
+                        <i class="fas fa-search-minus" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="pkg-lightbox-close w-10 h-10 rounded-lg text-white/90 hover:bg-white/10 flex items-center justify-center" aria-label="Close gallery">
+                        <i class="fas fa-times text-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </header>
+
+            <button type="button"
+                    class="pkg-lightbox-prev absolute left-2 sm:left-5 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 text-white/90 hover:text-white flex items-center justify-center transition-transform hover:scale-110"
+                    aria-label="Previous image">
+                <i class="fas fa-chevron-left text-2xl sm:text-3xl" aria-hidden="true"></i>
+            </button>
+
+            <button type="button"
+                    class="pkg-lightbox-next absolute right-2 sm:right-5 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 text-white/90 hover:text-white flex items-center justify-center transition-transform hover:scale-110"
+                    aria-label="Next image">
+                <i class="fas fa-chevron-right text-2xl sm:text-3xl" aria-hidden="true"></i>
+            </button>
+
+            <div class="pkg-lightbox-stage absolute inset-0 flex items-center justify-center px-12 sm:px-20 py-20 z-20">
+                <img src=""
+                     alt=""
+                     class="pkg-lightbox-image max-w-full max-h-full object-contain select-none transition-opacity duration-200"
+                     draggable="false">
+            </div>
+        </div>
+
+        <script type="application/json" id="pkg-lightbox-data">@json($lightboxImages)</script>
 
         {{-- Summary banner --}}
         <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 sm:p-5 mb-10 text-sm text-ink-muted leading-relaxed">
             {{ $package['summary'] }}
         </div>
 
-        <div class="grid lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+        <div class="pkg-detail-layout flex flex-col lg:flex-row lg:items-stretch gap-8 lg:gap-10">
             {{-- Main content --}}
-            <div class="lg:col-span-7 xl:col-span-8 space-y-10">
+            <div class="pkg-detail-main flex-1 min-w-0 space-y-10">
 
                 {{-- About this tour --}}
                 <section aria-labelledby="about-heading">
@@ -252,51 +321,53 @@
                         @endforeach
                     </div>
                 </section>
+
+                {{-- Similar tours (inside main column so sidebar stays sticky alongside) --}}
+                @if ($relatedPackages)
+                    <section class="pt-4 border-t border-slate-100" aria-labelledby="similar-heading">
+                        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+                            <div>
+                                <h2 id="similar-heading" class="text-2xl font-extrabold text-ink">Similar tours</h2>
+                                <p class="text-sm text-ink-muted mt-1">Explore more {{ $category['city'] }} adventures you might like</p>
+                            </div>
+                            <a href="{{ route($categoryRoute) }}" class="text-sm font-bold text-brand hover:text-brand-700">View all →</a>
+                        </div>
+                        <div class="grid sm:grid-cols-2 gap-5">
+                            @foreach ($relatedPackages as $related)
+                                <a href="{{ $related['url'] }}" class="card-hover group bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-soft flex flex-col">
+                                    <div class="relative aspect-[16/10] overflow-hidden bg-slate-200">
+                                        <x-site-image :src="$related['image']" :alt="$related['title']" width="500" height="312" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <span class="absolute bottom-3 right-3 bg-white rounded-lg px-2 py-1 text-[10px] font-bold shadow flex items-center gap-1">
+                                            <i class="fas fa-star text-amber-400" aria-hidden="true"></i>{{ $related['rating'] }}
+                                            <span class="text-ink-muted font-normal">({{ \App\Services\TourCatalog::reviewCount($related['rating']) }})</span>
+                                        </span>
+                                    </div>
+                                    <div class="p-4 flex flex-col flex-1">
+                                        <h3 class="font-bold text-ink text-sm leading-snug mb-2 group-hover:text-brand transition-colors flex-1">{{ $related['title'] }}</h3>
+                                        <p class="text-xs text-ink-muted mb-3">{{ $related['duration'] }} · {{ $category['city'] }}</p>
+                                        <div class="flex flex-wrap gap-1.5 mb-3">
+                                            <span class="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">Free Cancellation</span>
+                                            <span class="text-[9px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Pickup Available</span>
+                                        </div>
+                                        <div class="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
+                                            <x-tour-price :display="$related['price']" price-class="text-lg" suffix="/ person" />
+                                            <span class="text-xs font-bold text-brand">Book →</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
             </div>
 
-            {{-- Sidebar --}}
-            <aside class="lg:col-span-5 xl:col-span-4">
+            {{-- Sidebar (desktop sticky) --}}
+            <aside class="pkg-detail-aside w-full lg:w-80 xl:w-[22rem] shrink-0">
                 @include('tours.partials.package-sidebar')
             </aside>
         </div>
 
-        {{-- Similar tours --}}
-        @if ($relatedPackages)
-            <section class="mt-16 pt-12 border-t border-slate-100" aria-labelledby="similar-heading">
-                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
-                    <div>
-                        <h2 id="similar-heading" class="text-2xl font-extrabold text-ink">Similar tours</h2>
-                        <p class="text-sm text-ink-muted mt-1">Explore more {{ $category['city'] }} adventures you might like</p>
-                    </div>
-                    <a href="{{ route($categoryRoute) }}" class="text-sm font-bold text-brand hover:text-brand-700">View all →</a>
-                </div>
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    @foreach ($relatedPackages as $related)
-                        <a href="{{ $related['url'] }}" class="card-hover group bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-soft flex flex-col">
-                            <div class="relative aspect-[16/10] overflow-hidden bg-slate-200">
-                                <x-site-image :src="$related['image']" :alt="$related['title']" width="500" height="312" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                <span class="absolute bottom-3 right-3 bg-white rounded-lg px-2 py-1 text-[10px] font-bold shadow flex items-center gap-1">
-                                    <i class="fas fa-star text-amber-400" aria-hidden="true"></i>{{ $related['rating'] }}
-                                    <span class="text-ink-muted font-normal">({{ \App\Services\TourCatalog::reviewCount($related['rating']) }})</span>
-                                </span>
-                            </div>
-                            <div class="p-4 flex flex-col flex-1">
-                                <h3 class="font-bold text-ink text-sm leading-snug mb-2 group-hover:text-brand transition-colors flex-1">{{ $related['title'] }}</h3>
-                                <p class="text-xs text-ink-muted mb-3">{{ $related['duration'] }} · {{ $category['city'] }}</p>
-                                <div class="flex flex-wrap gap-1.5 mb-3">
-                                    <span class="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">Free Cancellation</span>
-                                    <span class="text-[9px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Pickup Available</span>
-                                </div>
-                                <div class="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
-                                    <p class="text-lg font-extrabold text-ink">₹{{ $related['price'] }} <span class="text-xs font-normal text-ink-muted">/ person</span></p>
-                                    <span class="text-xs font-bold text-brand">Book →</span>
-                                </div>
-                            </div>
-                        </a>
-                    @endforeach
-                </div>
-            </section>
-        @endif
+        @include('tours.partials.package-mobile-bar')
     </div>
 </div>
 @endsection
@@ -338,7 +409,30 @@
             grid-template-columns: 1fr 1fr;
             gap: 0.5rem;
         }
-        .pkg-gallery-ref-grid > div { aspect-ratio: 4 / 3; }
+        .pkg-gallery-ref-grid > button { aspect-ratio: 4 / 3; }
+    }
+    .pkg-gallery-trigger {
+        display: block;
+        width: 100%;
+        border: 0;
+        padding: 0;
+        text-align: left;
+    }
+    .pkg-gallery-ref-main.pkg-gallery-trigger {
+        height: 100%;
+    }
+    .pkg-lightbox:not(.hidden) {
+        display: block;
+    }
+    .pkg-lightbox-image {
+        transform-origin: center center;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .pkg-lightbox-image.is-changing {
+        opacity: 0;
+    }
+    body.pkg-lightbox-open {
+        overflow: hidden;
     }
     .pkg-itinerary-step { position: relative; }
     .pkg-itinerary-step:not(:last-child)::before {
@@ -351,5 +445,152 @@
         background: #e2e8f0;
     }
     details.pkg-faq-item summary::-webkit-details-marker { display: none; }
+
+    @media (min-width: 1024px) {
+        .pkg-detail-layout {
+            align-items: stretch;
+        }
+
+        .pkg-detail-aside {
+            align-self: stretch;
+        }
+
+        .pkg-sidebar-card {
+            position: sticky;
+            top: 5rem;
+            z-index: 30;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        .pkg-detail-page a[aria-label="WhatsApp"] {
+            bottom: 5.75rem;
+        }
+        .pkg-detail-page button[aria-label="Ask AI"] {
+            bottom: 5.75rem;
+        }
+        .pkg-mobile-bar {
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+    }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+    const dataEl = document.getElementById('pkg-lightbox-data');
+    const lightbox = document.getElementById('pkg-lightbox');
+    if (!dataEl || !lightbox) return;
+
+    const images = JSON.parse(dataEl.textContent || '[]');
+    if (!images.length) return;
+
+    const tourTitle = lightbox.dataset.tourTitle || '';
+    const imgEl = lightbox.querySelector('.pkg-lightbox-image');
+    const counterEl = lightbox.querySelector('.pkg-lightbox-counter');
+    const btnPrev = lightbox.querySelector('.pkg-lightbox-prev');
+    const btnNext = lightbox.querySelector('.pkg-lightbox-next');
+    const btnClose = lightbox.querySelector('.pkg-lightbox-close');
+    const btnZoomIn = lightbox.querySelector('.pkg-lightbox-zoom-in');
+    const btnZoomOut = lightbox.querySelector('.pkg-lightbox-zoom-out');
+    const backdrop = lightbox.querySelector('.pkg-lightbox-backdrop');
+    let current = 0;
+    let zoom = 1;
+    let touchStartX = 0;
+
+    function updateCounter() {
+        counterEl.textContent = ' — Image ' + (current + 1) + ' of ' + images.length;
+    }
+
+    function setZoom(value) {
+        zoom = Math.min(2.5, Math.max(1, value));
+        imgEl.style.transform = 'scale(' + zoom + ')';
+        btnZoomOut.disabled = zoom <= 1;
+        btnZoomIn.disabled = zoom >= 2.5;
+    }
+
+    function render(index, animate) {
+        const nextIndex = (index + images.length) % images.length;
+        const item = images[nextIndex];
+
+        function applyImage() {
+            current = nextIndex;
+            imgEl.src = item.url;
+            imgEl.alt = item.alt || tourTitle;
+            updateCounter();
+            setZoom(1);
+            imgEl.classList.remove('is-changing');
+        }
+
+        if (animate) {
+            imgEl.classList.add('is-changing');
+            setTimeout(applyImage, 180);
+        } else {
+            applyImage();
+        }
+
+        const showNav = images.length > 1;
+        btnPrev.style.visibility = showNav ? 'visible' : 'hidden';
+        btnNext.style.visibility = showNav ? 'visible' : 'hidden';
+    }
+
+    function open(index) {
+        render(index, false);
+        lightbox.hidden = false;
+        lightbox.classList.remove('hidden');
+        document.body.classList.add('pkg-lightbox-open');
+    }
+
+    function close() {
+        lightbox.hidden = true;
+        lightbox.classList.add('hidden');
+        document.body.classList.remove('pkg-lightbox-open');
+        imgEl.removeAttribute('src');
+        setZoom(1);
+    }
+
+    function goNext() {
+        if (images.length < 2) return;
+        render(current + 1, true);
+    }
+
+    function goPrev() {
+        if (images.length < 2) return;
+        render(current - 1, true);
+    }
+
+    document.querySelectorAll('.pkg-gallery-trigger').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            open(parseInt(btn.dataset.lightboxIndex || '0', 10));
+        });
+    });
+
+    btnClose?.addEventListener('click', close);
+    btnPrev?.addEventListener('click', function (e) { e.stopPropagation(); goPrev(); });
+    btnNext?.addEventListener('click', function (e) { e.stopPropagation(); goNext(); });
+    btnZoomIn?.addEventListener('click', function () { setZoom(zoom + 0.25); });
+    btnZoomOut?.addEventListener('click', function () { setZoom(zoom - 0.25); });
+    backdrop?.addEventListener('click', close);
+
+    document.addEventListener('keydown', function (e) {
+        if (lightbox.hidden) return;
+        if (e.key === 'Escape') close();
+        if (e.key === 'ArrowLeft') goPrev();
+        if (e.key === 'ArrowRight') goNext();
+    });
+
+    lightbox.addEventListener('touchstart', function (e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    lightbox.addEventListener('touchend', function (e) {
+        const diff = e.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(diff) < 50) return;
+        if (diff > 0) goPrev();
+        else goNext();
+    }, { passive: true });
+})();
+</script>
 @endpush

@@ -2,17 +2,26 @@
 
 namespace Database\Seeders;
 
+use App\Models\BlogPost;
 use App\Models\City;
+use App\Models\CmsPage;
+use App\Models\HomeHero;
 use App\Models\HomeHighlight;
+use App\Models\HomeProcessStep;
+use App\Models\HomePromoSection;
 use App\Models\HomeStat;
 use App\Models\Monument;
 use App\Models\PackageExclusion;
 use App\Models\PackageFaq;
+use App\Models\PackageFeature;
+use App\Models\PackageGalleryImage;
 use App\Models\PackageHighlight;
+use App\Models\PackageImportantInfo;
 use App\Models\PackageInclusion;
 use App\Models\PackageItinerary;
 use App\Models\PackageLocationTag;
 use App\Models\SiteSetting;
+use App\Models\SocialLink;
 use App\Models\Testimonial;
 use App\Models\TourCategory;
 use App\Models\TourPackage;
@@ -25,6 +34,7 @@ class TourMasterSeeder extends Seeder
     {
         $this->seedSiteSettings();
         $this->seedHomepage();
+        $this->seedExtendedCms();
         $this->seedCitiesAndCategories();
     }
 
@@ -39,6 +49,13 @@ class TourMasterSeeder extends Seeder
             'phone_display' => $site['phone_display'],
             'email' => $site['email'],
             'whatsapp' => $site['whatsapp'],
+            'footer_description' => $site['name'].' is a dynamic and experienced tour operator company, dedicated to providing our clients with unforgettable travel experiences.',
+            'logo_default' => $site['logo']['default'],
+            'logo_white' => $site['logo']['white'],
+            'logo_icon' => $site['logo']['icon'],
+            'hero_main_image' => $site['images']['hero']['main']['url'] ?? 'cities/hero-main.jpg',
+            'hero_main_alt' => $site['images']['hero']['main']['alt'] ?? 'Taj Mahal, Agra',
+            'image_fallback' => $site['images']['fallback'] ?? 'cities/fallback.jpg',
         ] as $key => $value) {
             SiteSetting::set($key, $value, 'site');
         }
@@ -91,6 +108,161 @@ class TourMasterSeeder extends Seeder
                 'is_active' => true,
             ]);
         }
+    }
+
+    private function seedExtendedCms(): void
+    {
+        HomeHero::query()->delete();
+        HomeHero::create([
+            'badge_text' => 'Agra · Delhi · Jaipur · Varanasi',
+            'rating_text' => '4.9 · 2,260+ reviews',
+            'heading_line1' => "Discover India’s heritage",
+            'heading_line2' => 'with local experts',
+            'subtitle' => 'Private Taj Mahal sunrises, Old Delhi walks, Jaipur palaces & Varanasi Ganga aarti — curated by '.config('site.name').'.',
+            'search_placeholder' => 'Taj Mahal, Old Delhi, Jaipur...',
+            'background_image' => 'cities/hero-main.jpg',
+            'thumbnail_keys' => ['agra', 'delhi', 'jaipur', 'varanasi'],
+            'is_active' => true,
+        ]);
+
+        HomeProcessStep::query()->delete();
+        foreach ([
+            ['fa-map-marked-alt', 'bg-orange-50 border-orange-200 text-accent', '01', 'Pick your city', 'Browse tours in Agra, Delhi, Jaipur or Varanasi.', 1],
+            ['fa-calendar-check', 'bg-brand-50 border-brand-200 text-brand', '02', 'Select date & book', 'Choose date, group size & extras. Instant confirmation.', 2],
+            ['fa-route', 'bg-emerald-50 border-emerald-200 text-brand-700', '03', 'Explore with guide', 'Your local guide handles transport, tickets & timing.', 3],
+        ] as [$icon, $color, $num, $title, $text, $order]) {
+            HomeProcessStep::create([
+                'icon' => $icon, 'color_classes' => $color, 'step_number' => $num,
+                'title' => $title, 'text' => $text, 'sort_order' => $order, 'is_active' => true,
+            ]);
+        }
+
+        HomePromoSection::query()->delete();
+        foreach ([
+            [
+                'key' => 'golden_triangle',
+                'badge' => 'Combo Package',
+                'title' => 'Golden Triangle: Delhi + Agra + Jaipur',
+                'description' => 'Cover all three royal & historic cities in one seamless journey — Taj Mahal, Delhi monuments & Jaipur palaces with private car, guide & flexible itinerary.',
+                'tags' => ['3 Cities', '3–7 Days', 'Private Car', 'From $8,500'],
+                'price_label' => 'From $8,500',
+                'cta_label' => 'View Golden Triangle Tours',
+                'cta_route' => 'tours.golden-triangle',
+                'category_slug' => 'golden-triangle',
+                'city_keys' => ['agra', 'delhi', 'jaipur'],
+            ],
+            [
+                'key' => 'cta',
+                'badge' => 'Agra · Delhi · Jaipur · Varanasi',
+                'title' => 'Ready to explore India’s finest cities?',
+                'description' => 'Tell us which city you want to visit — custom quote within 2 hours, free cancellation on most tours.',
+                'cta_label' => 'Get a Free Quote',
+                'cta_route' => 'contact',
+                'secondary_cta_label' => 'Browse all tours',
+                'secondary_cta_route' => 'tours.packages',
+            ],
+            [
+                'key' => 'spotlight',
+                'badge' => 'Delhi & Agra',
+                'title' => 'Where most travelers start',
+                'subtitle' => 'Capital heritage meets the Taj — our two most booked destinations',
+            ],
+            [
+                'key' => 'story',
+                'badge' => 'Why '.config('site.name').'?',
+                'title' => 'Your trusted North India tour partner',
+                'subtitle' => 'Local experts, private tours & honest pricing — everything you need for a hassle-free trip.',
+            ],
+        ] as $data) {
+            HomePromoSection::create($data + ['is_active' => true]);
+        }
+
+        SocialLink::query()->delete();
+        foreach ([
+            ['fab fa-youtube', 'YouTube', '#', 1],
+            ['fab fa-facebook-f', 'Facebook', '#', 2],
+            ['fab fa-twitter', 'Twitter', '#', 3],
+            ['fab fa-instagram', 'Instagram', '#', 4],
+            ['fab fa-pinterest-p', 'Pinterest', '#', 5],
+        ] as [$icon, $label, $url, $order]) {
+            SocialLink::create(compact('icon', 'label', 'url') + ['sort_order' => $order, 'is_active' => true]);
+        }
+
+        CmsPage::query()->delete();
+        $contactUrl = route('contact');
+        foreach ([
+            [
+                'about', 'About Us', 'About Us',
+                '<p>'.config('site.name').' is a specialist tour operator for Agra, Delhi, Jaipur, Varanasi and the Golden Triangle. Since our founding, we have helped thousands of travellers experience India\'s heritage with comfort, safety and authentic local insight.</p>
+                <h2>Who we are</h2>
+                <p>We are a team of licensed guides, experienced drivers and travel planners based in North India. Every itinerary is private — your vehicle, your schedule, your pace.</p>
+                <h2>What we offer</h2>
+                <ul>
+                    <li>Same-day and multi-day private tours with hotel pickup</li>
+                    <li>Expert English-speaking guides at monuments and cities</li>
+                    <li>Flexible payment — pay on arrival, deposit or full online checkout</li>
+                    <li>24/7 support before and during your trip</li>
+                </ul>
+                <h2>Our promise</h2>
+                <p>Transparent pricing, no hidden fees, and a commitment to memorable experiences — from Taj Mahal sunrise to Varanasi ghats.</p>',
+                true, 1,
+            ],
+            [
+                'awards', 'Our Awards', 'Our Awards',
+                '<p>Recognized for excellence in heritage tourism across North India. Our team takes pride in consistent guest satisfaction and responsible travel practices.</p>',
+                true, 2,
+            ],
+            [
+                'terms', 'Terms of Service', 'Terms of Service',
+                '<p>These terms govern bookings made with '.config('site.name').'. By confirming a tour, you agree to the following.</p>
+                <h2>Bookings &amp; confirmation</h2>
+                <p>A booking is confirmed once you receive our confirmation email. We reserve the right to decline bookings that cannot be fulfilled.</p>
+                <h2>Payments</h2>
+                <p>You may pay on arrival, a 30% deposit to reserve, or 100% online where available. Prices are quoted in the currency shown at checkout unless stated otherwise.</p>
+                <h2>Cancellations &amp; refunds</h2>
+                <ul>
+                    <li>Free cancellation up to 24 hours before tour start for most day tours</li>
+                    <li>Deposits may be non-refundable within 24 hours of travel date</li>
+                    <li>Refunds for online payments are processed within 5–10 business days</li>
+                </ul>
+                <h2>Guest responsibilities</h2>
+                <p>Guests must carry valid ID, arrive on time at the agreed pickup point, and follow monument and local rules. We are not liable for delays caused by traffic, weather or site closures beyond our control.</p>
+                <h2>Contact</h2>
+                <p>Questions about these terms? Use our <a href="'.$contactUrl.'">contact page</a>.</p>',
+                false, 3,
+            ],
+            [
+                'privacy', 'Privacy Policy', 'Privacy Policy',
+                '<p>'.config('site.name').' respects your privacy. This policy explains what data we collect and how we use it.</p>
+                <h2>Information we collect</h2>
+                <ul>
+                    <li>Name, email, phone and country when you enquire or book</li>
+                    <li>Travel dates, pickup location and special requests</li>
+                    <li>Payment details processed securely by our payment partners (we do not store full card numbers)</li>
+                </ul>
+                <h2>How we use your data</h2>
+                <p>We use your information to confirm bookings, send itineraries, provide customer support, and improve our services. We do not sell your personal data to third parties.</p>
+                <h2>Cookies &amp; analytics</h2>
+                <p>Our website may use cookies for basic functionality and analytics. You can control cookies through your browser settings.</p>
+                <h2>Data retention &amp; rights</h2>
+                <p>We retain booking records as required for legal and accounting purposes. You may request access or correction of your data by contacting us.</p>
+                <h2>Contact</h2>
+                <p>For privacy requests, reach us via the <a href="'.$contactUrl.'">contact page</a>.</p>',
+                false, 4,
+            ],
+            [
+                'taxi', 'Taxi Service & Transfers', 'Taxi Service & Transfers',
+                '<p>Private taxi and transfer services between Delhi, Agra, Jaipur, airports and hotels. Contact us for intercity quotes and airport pickups.</p>',
+                false, 5,
+            ],
+        ] as [$slug, $title, $heading, $content, $footer, $order]) {
+            CmsPage::create([
+                'slug' => $slug, 'title' => $title, 'heading' => $heading,
+                'content' => $content, 'show_in_footer' => $footer, 'sort_order' => $order, 'is_active' => true,
+            ]);
+        }
+
+        $this->seedBlogPosts();
     }
 
     private function seedCitiesAndCategories(): void
@@ -169,6 +341,8 @@ class TourMasterSeeder extends Seeder
                     'map_query' => $this->mapQueryFor($cat['key']),
                     'sort_order' => $order,
                     'is_active' => true,
+                    'show_in_nav' => true,
+                    'nav_label' => $cat['title'],
                 ]
             );
 
@@ -183,6 +357,7 @@ class TourMasterSeeder extends Seeder
                 Monument::create([
                     'category_id' => $category->id,
                     'name' => $mon['name'],
+                    'slug' => TourCatalog::slugify($mon['name']),
                     'description' => $mon['desc'],
                     'image' => $mon['image'],
                     'sort_order' => $i + 1,
@@ -288,6 +463,50 @@ class TourMasterSeeder extends Seeder
                 'sort_order' => $i + 1,
             ]);
         }
+
+        $package->galleryImages()->delete();
+        $catConfig = config("tours.categories.{$category->slug}", []);
+        $gallery = [['src' => $pkg['image'], 'alt' => $pkg['title']]];
+        foreach ($catConfig['monuments'] ?? [] as $monument) {
+            $gallery[] = ['src' => $monument['image'], 'alt' => $monument['name'] ?? 'Tour photo'];
+        }
+        if (! empty($catConfig['banner'])) {
+            $gallery[] = ['src' => $catConfig['banner'], 'alt' => ($catConfig['city'] ?? '').' tour'];
+        }
+        foreach (array_slice($gallery, 0, 6) as $i => $img) {
+            PackageGalleryImage::create([
+                'package_id' => $package->id,
+                'image' => $img['src'],
+                'alt' => $img['alt'] ?? $package->title,
+                'sort_order' => $i + 1,
+            ]);
+        }
+
+        $package->features()->delete();
+        foreach ($p['features'] ?? [] as $i => $feature) {
+            PackageFeature::create([
+                'package_id' => $package->id,
+                'icon' => $feature['icon'],
+                'color_classes' => $feature['color'],
+                'title' => $feature['title'],
+                'description' => $feature['desc'],
+                'sort_order' => $i + 1,
+            ]);
+        }
+
+        $package->importantInfos()->delete();
+        $sort = 0;
+        foreach ($p['important_info'] ?? [] as $heading => $items) {
+            foreach ($items as $item) {
+                $sort++;
+                PackageImportantInfo::create([
+                    'package_id' => $package->id,
+                    'heading' => $heading,
+                    'item_text' => $item,
+                    'sort_order' => $sort,
+                ]);
+            }
+        }
     }
 
     private function featuredPackageTitles(): array
@@ -323,5 +542,76 @@ class TourMasterSeeder extends Seeder
             'varanasi' => 'Dashashwamedh Ghat,Varanasi,India',
             default => 'India',
         };
+    }
+
+    private function seedBlogPosts(): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('blog_posts')) {
+            return;
+        }
+
+        BlogPost::query()->delete();
+
+        $posts = [
+            [
+                'title' => 'Best Time to Visit the Taj Mahal',
+                'slug' => 'best-time-to-visit-taj-mahal',
+                'excerpt' => 'Sunrise, winter mornings and weekdays — our guide\'s tips for the perfect Taj Mahal visit.',
+                'featured_image' => 'cities/agra-banner.jpg',
+                'content' => '<p>The Taj Mahal is stunning at any hour, but sunrise offers the softest light and smaller crowds. Arrive 30 minutes before opening for security and ticket lines.</p>
+                    <h2>Season guide</h2>
+                    <ul>
+                        <li><strong>October–March:</strong> Best weather, ideal for photography</li>
+                        <li><strong>April–June:</strong> Hot days — plan early morning or late afternoon</li>
+                        <li><strong>July–September:</strong> Monsoon — fewer tourists, dramatic skies</li>
+                    </ul>
+                    <p>Book a private sunrise tour with hotel pickup to skip transport stress.</p>',
+                'days_ago' => 5,
+            ],
+            [
+                'title' => 'Golden Triangle in 3 Days: A Practical Itinerary',
+                'slug' => 'golden-triangle-3-day-itinerary',
+                'excerpt' => 'Delhi, Agra and Jaipur in three days — how to cover highlights without rushing.',
+                'featured_image' => 'cities/delhi-banner.jpg',
+                'content' => '<p>The Golden Triangle is India\'s most popular route for first-time visitors. Here is a balanced 3-day plan with private car and guide.</p>
+                    <h2>Day 1 — Delhi</h2>
+                    <p>Old Delhi bazaar walk, Red Fort exterior, India Gate and Humayun\'s Tomb.</p>
+                    <h2>Day 2 — Agra</h2>
+                    <p>Early drive to Agra, Taj Mahal, Agra Fort and optional Mehtab Bagh sunset.</p>
+                    <h2>Day 3 — Jaipur</h2>
+                    <p>Amber Fort, City Palace, Hawa Mahal and return to Delhi or overnight in Jaipur.</p>',
+                'days_ago' => 12,
+            ],
+            [
+                'title' => 'Jaipur Food & Culture: What Not to Miss',
+                'slug' => 'jaipur-food-and-culture-guide',
+                'excerpt' => 'From dal baati churma to block-print bazaars — taste and shop like a local in the Pink City.',
+                'featured_image' => 'cities/jaipur-banner.jpg',
+                'content' => '<p>Jaipur blends royal history with vibrant street life. After palace visits, save time for local flavours and crafts.</p>
+                    <h2>Must-try dishes</h2>
+                    <ul>
+                        <li>Dal baati churma at a heritage haveli restaurant</li>
+                        <li>Pyaaz kachori from a Old City stall</li>
+                        <li>Lassi on MI Road after sightseeing</li>
+                    </ul>
+                    <h2>Shopping tips</h2>
+                    <p>Johari Bazaar for jewellery, Bapu Bazaar for textiles. Ask your guide for fair-price shops.</p>',
+                'days_ago' => 20,
+            ],
+        ];
+
+        foreach ($posts as $i => $post) {
+            BlogPost::create([
+                'title' => $post['title'],
+                'slug' => $post['slug'],
+                'excerpt' => $post['excerpt'],
+                'content' => $post['content'],
+                'featured_image' => $post['featured_image'],
+                'author_name' => config('site.name'),
+                'published_at' => now()->subDays($post['days_ago']),
+                'sort_order' => $i + 1,
+                'is_active' => true,
+            ]);
+        }
     }
 }

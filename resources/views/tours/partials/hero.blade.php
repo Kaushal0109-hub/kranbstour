@@ -15,9 +15,9 @@
         </nav>
 
         <div class="flex flex-wrap items-center gap-3 mb-4">
-            <span class="w-11 h-11 bg-brand rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+            <!-- <span class="w-11 h-11 bg-brand rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
                 <i class="fas {{ $tour['icon'] }}" aria-hidden="true"></i>
-            </span>
+            </span> -->
             <span class="bg-white/10 backdrop-blur text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20">
                 {{ $tour['tour_count'] }}
             </span>
@@ -38,10 +38,12 @@
                 View Packages
                 <i class="fas fa-arrow-down text-xs" aria-hidden="true"></i>
             </a>
-            <a href="tel:{{ config('site.phone') }}" class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/25 text-white font-semibold text-sm px-7 py-3.5 rounded-full hover:bg-white/20 transition-colors">
+            @if (\App\Helpers\SiteHelper::phoneDisplay())
+            <a href="{{ \App\Helpers\SiteHelper::telHref() }}" class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/25 text-white font-semibold text-sm px-7 py-3.5 rounded-full hover:bg-white/20 transition-colors">
                 <i class="fas fa-phone-alt text-xs" aria-hidden="true"></i>
-                {{ config('site.phone_display') }}
+                {{ \App\Helpers\SiteHelper::phoneDisplay() }}
             </a>
+            @endif
         </div>
     </div>
 </section>

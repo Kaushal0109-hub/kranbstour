@@ -12,7 +12,7 @@
                         <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Customer</th>
                         <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Tour</th>
                         <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Date</th>
-                        <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Price</th>
+                        <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Payment</th>
                         <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Status</th>
                     </tr>
                 </thead>
@@ -20,15 +20,22 @@
                     @forelse ($bookings as $booking)
                         <tr>
                             <td class="px-5 py-4">
-                                <p class="font-bold text-ink">{{ $booking->user->name }}</p>
-                                <p class="text-xs text-ink-muted">{{ $booking->user->email }}</p>
+                                <p class="font-bold text-ink">{{ $booking->customerDisplayName() }}</p>
+                                <p class="text-xs text-ink-muted">{{ $booking->customerDisplayEmail() }}</p>
+                                @if ($booking->booking_ref)
+                                    <p class="text-[10px] text-ink-muted mt-1">Ref: {{ $booking->booking_ref }}</p>
+                                @endif
                             </td>
                             <td class="px-5 py-4">
                                 <p class="font-semibold text-ink">{{ $booking->package_title }}</p>
-                                <p class="text-xs text-ink-muted">{{ $booking->city }}</p>
+                                <p class="text-xs text-ink-muted">{{ $booking->city }} · {{ $booking->travelers }} travelers</p>
                             </td>
                             <td class="px-5 py-4 text-ink-muted">{{ $booking->travel_date?->format('d M Y') ?? '—' }}</td>
-                            <td class="px-5 py-4 font-bold">₹{{ $booking->price }}</td>
+                            <td class="px-5 py-4">
+                                <p class="font-bold text-ink">{{ \App\Helpers\CurrencyHelper::formatAmount($booking->total_amount) }}</p>
+                                <p class="text-xs text-ink-muted">{{ $booking->paymentOptionLabel() }}@if($booking->payment_gateway) · {{ ucfirst($booking->payment_gateway) }}@endif</p>
+                                <p class="text-[10px] font-semibold text-brand">{{ $booking->paymentStatusLabel() }}</p>
+                            </td>
                             <td class="px-5 py-4">
                                 <form action="{{ route('admin.bookings.update', $booking) }}" method="POST" class="flex items-center gap-2">
                                     @csrf

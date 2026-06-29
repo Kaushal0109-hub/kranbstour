@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
+@php use App\Helpers\SiteHelper; @endphp
+
 @section('title', 'Contact Us — ' . config('site.name'))
-@section('meta_description', 'Contact ' . config('site.name') . ' for Agra, Delhi, Jaipur & Varanasi tour quotes. Call ' . config('site.phone_display') . ' or send us a message.')
+@section('meta_description', 'Contact ' . config('site.name') . ' for Agra, Delhi, Jaipur & Varanasi tour quotes. Call ' . SiteHelper::phoneDisplay() . ' or send us a message.')
 
 @section('content')
     {{-- Hero --}}
@@ -41,18 +43,21 @@
                         <p class="text-sm text-ink-muted mb-6">Reach us anytime — our team is available 24/7 for tour enquiries.</p>
 
                         <div class="space-y-4">
-                            <a href="tel:{{ config('site.phone') }}"
+                            @if (SiteHelper::phoneDisplay())
+                            <a href="{{ SiteHelper::telHref() }}"
                                class="flex items-center gap-4 p-4 rounded-xl bg-brand-50 border border-brand-100 hover:border-brand/30 transition-colors group">
                                 <span class="w-12 h-12 rounded-xl bg-brand text-white flex items-center justify-center text-lg shrink-0">
                                     <i class="fas fa-phone-alt" aria-hidden="true"></i>
                                 </span>
                                 <div>
                                     <p class="text-[10px] font-bold uppercase tracking-wider text-brand">Call us</p>
-                                    <p class="text-lg font-extrabold text-ink group-hover:text-brand transition-colors">{{ config('site.phone_display') }}</p>
+                                    <p class="text-lg font-extrabold text-ink group-hover:text-brand transition-colors">{{ SiteHelper::phoneDisplay() }}</p>
                                 </div>
                             </a>
+                            @endif
 
-                            <a href="https://wa.me/{{ ltrim(config('site.phone'), '+') }}" target="_blank" rel="noopener noreferrer"
+                            @if (SiteHelper::whatsappDigits())
+                            <a href="{{ SiteHelper::whatsappHref() }}" target="_blank" rel="noopener noreferrer"
                                class="flex items-center gap-4 p-4 rounded-xl bg-[#25D366]/10 border border-[#25D366]/20 hover:border-[#25D366]/40 transition-colors group">
                                 <span class="w-12 h-12 rounded-xl bg-[#25D366] text-white flex items-center justify-center text-xl shrink-0">
                                     <i class="fab fa-whatsapp" aria-hidden="true"></i>
@@ -62,17 +67,20 @@
                                     <p class="text-sm font-bold text-ink group-hover:text-[#128C7E] transition-colors">Chat with us instantly</p>
                                 </div>
                             </a>
+                            @endif
 
-                            <a href="mailto:{{ config('site.email') }}"
+                            @if (SiteHelper::email())
+                            <a href="{{ SiteHelper::mailtoHref() }}"
                                class="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-brand/30 transition-colors group">
                                 <span class="w-12 h-12 rounded-xl bg-slate-100 text-brand flex items-center justify-center text-lg shrink-0">
                                     <i class="fas fa-envelope" aria-hidden="true"></i>
                                 </span>
                                 <div>
                                     <p class="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Email</p>
-                                    <p class="text-sm font-bold text-ink group-hover:text-brand transition-colors">{{ config('site.email') }}</p>
+                                    <p class="text-sm font-bold text-ink group-hover:text-brand transition-colors">{{ SiteHelper::email() }}</p>
                                 </div>
                             </a>
+                            @endif
                         </div>
                     </div>
 

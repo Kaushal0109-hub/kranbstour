@@ -12,10 +12,13 @@ class TourCategory extends Model
     protected $fillable = [
         'city_id', 'key', 'slug', 'city_name', 'title', 'heading', 'tagline', 'icon',
         'description', 'banner_image', 'card_image', 'tour_count_label', 'route_name',
-        'map_query', 'sort_order', 'is_active',
+        'map_query', 'sort_order', 'is_active', 'show_in_nav', 'nav_label',
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active' => 'boolean',
+        'show_in_nav' => 'boolean',
+    ];
 
     public function city(): BelongsTo
     {

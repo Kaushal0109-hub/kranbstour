@@ -20,6 +20,7 @@
         <table class="w-full text-sm">
             <thead class="bg-surface text-left">
                 <tr>
+                    <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase w-16">Image</th>
                     <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Name</th>
                     <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Category</th>
                     <th class="px-5 py-3 text-xs font-bold text-ink-muted uppercase">Actions</th>
@@ -28,12 +29,20 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse ($monuments as $monument)
                     <tr>
+                        <td class="px-5 py-4">
+                            <x-admin-image-thumb :src="$monument->image" :alt="$monument->name" />
+                        </td>
                         <td class="px-5 py-4 font-bold">{{ $monument->name }}</td>
                         <td class="px-5 py-4 text-ink-muted">{{ $monument->category->title ?? '—' }}</td>
-                        <td class="px-5 py-4"><a href="{{ route('admin.master.monuments.edit', $monument) }}" class="text-brand font-semibold">Edit</a></td>
+                        <td class="px-5 py-4">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <a href="{{ route('admin.master.monuments.edit', $monument) }}" class="text-brand font-semibold hover:underline">Edit</a>
+                                <x-admin-delete-form :action="route('admin.master.monuments.destroy', $monument)" />
+                            </div>
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" class="px-5 py-8 text-center text-ink-muted">No monuments.</td></tr>
+                    <tr><td colspan="4" class="px-5 py-8 text-center text-ink-muted">No monuments.</td></tr>
                 @endforelse
             </tbody>
         </table>

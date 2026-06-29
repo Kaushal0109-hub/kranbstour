@@ -1,32 +1,18 @@
 @php
-    $companyLinks = [
-        ['Blog', 'blog'],
-        ['About Us', 'about'],
-        ['Contact Us', 'contact'],
-        ['Our Awards', 'awards'],
+    use App\Helpers\SiteHelper;
+    $footerServiceLinks = $footerServiceLinks ?? [
+        ['label' => 'Tour Packages', 'route' => 'tours.packages'],
     ];
-
-    $serviceLinks = [
-        ['Taj Mahal Tours', 'tours.taj-mahal'],
-        ['Jaipur Tours', 'tours.jaipur'],
-        ['New Delhi Tours', 'tours.delhi'],
-        ['Golden Triangle Tours', 'tours.golden-triangle'],
-        ['Varanasi Tours', 'tours.varanasi'],
-        ['Tour Packages', 'tours.packages'],
+    $footerCompanyLinks = $footerCompanyLinks ?? [
+        ['label' => 'About Us', 'route' => 'about'],
+        ['label' => 'Contact Us', 'route' => 'contact'],
     ];
-
+    $socialLinks = $socialLinks ?? [];
     $legalLinks = [
-        ['Terms of Service', 'terms'],
-        ['Privacy Policy', 'privacy'],
+        ['label' => 'Terms of Service', 'route' => 'terms'],
+        ['label' => 'Privacy Policy', 'route' => 'privacy'],
     ];
-
-    $socialLinks = [
-        ['fab fa-youtube', 'YouTube'],
-        ['fab fa-facebook-f', 'Facebook'],
-        ['fab fa-twitter', 'Twitter'],
-        ['fab fa-instagram', 'Instagram'],
-        ['fab fa-pinterest-p', 'Pinterest'],
-    ];
+    $footerDescription = config('site.footer_description', config('site.name').' is a dynamic and experienced tour operator company, dedicated to providing our clients with unforgettable travel experiences.');
 
     $paymentMethods = [
         ['PayPal', 'bg-[#003087] text-white', 'PayPal'],
@@ -45,7 +31,7 @@
 @endphp
 
 <footer class="site-footer bg-black text-slate-400">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-36 sm:pb-10">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-8 sm:pb-10">
 
         {{--
             Mobile/tablet: 2-col grid — brand full width, Company|Services side-by-side, Legal + Newsletter full width
@@ -58,30 +44,40 @@
                 @include('partials.logo', ['variant' => 'dark'])
 
                 <p class="text-sm leading-relaxed text-slate-300">
-                    {{ config('site.name') }} is a dynamic and experienced tour operator company,
-                    dedicated to providing our clients with unforgettable travel experiences.
+                    {{ $footerDescription }}
                 </p>
 
-                <a href="tel:{{ config('site.phone') }}" class="inline-flex items-start gap-3 group">
-                    <span class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0 mt-0.5 group-hover:bg-brand/20 transition-colors">
-                        <i class="fas fa-phone-alt text-xs" aria-hidden="true"></i>
-                    </span>
-                    <span>
-                        <span class="block text-sm text-slate-300 mb-1">Need help? Call us</span>
-                        <span class="block text-[1.35rem] sm:text-2xl font-extrabold text-accent tracking-tight group-hover:text-accent-light transition-colors">
-                            {{ config('site.phone_display') }}
+                @if (SiteHelper::phoneDisplay())
+                    <a href="{{ SiteHelper::telHref() }}" class="inline-flex items-start gap-3 group">
+                        <span class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0 mt-0.5 group-hover:bg-brand/20 transition-colors">
+                            <i class="fas fa-phone-alt text-xs" aria-hidden="true"></i>
                         </span>
-                    </span>
-                </a>
+                        <span>
+                            <span class="block text-sm text-slate-300 mb-1">Need help? Call us</span>
+                            <span class="block text-[1.35rem] sm:text-2xl font-extrabold text-accent tracking-tight group-hover:text-accent-light transition-colors">
+                                {{ SiteHelper::phoneDisplay() }}
+                            </span>
+                        </span>
+                    </a>
+                @endif
+
+                @if (SiteHelper::email())
+                    <a href="{{ SiteHelper::mailtoHref() }}" class="inline-flex items-center gap-3 group mt-4">
+                        <span class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0 group-hover:bg-brand/20 transition-colors">
+                            <i class="fas fa-envelope text-xs" aria-hidden="true"></i>
+                        </span>
+                        <span class="text-sm text-slate-300 group-hover:text-white transition-colors">{{ SiteHelper::email() }}</span>
+                    </a>
+                @endif
             </div>
 
             {{-- 2. Company — left column on mobile --}}
             <div>
                 <h4 class="text-base font-bold text-white mb-4 sm:mb-5">Company</h4>
                 <ul class="space-y-3 sm:space-y-3.5">
-                    @foreach ($companyLinks as [$label, $route])
+                    @foreach ($footerCompanyLinks as $link)
                         <li>
-                            <a href="{{ route($route) }}" class="text-sm text-slate-400 hover:text-white transition-colors leading-snug">{{ $label }}</a>
+                            <a href="{{ route($link['route']) }}" class="text-sm text-slate-400 hover:text-white transition-colors leading-snug">{{ $link['label'] }}</a>
                         </li>
                     @endforeach
                 </ul>
@@ -91,9 +87,9 @@
             <div>
                 <h4 class="text-base font-bold text-white mb-4 sm:mb-5">Services</h4>
                 <ul class="space-y-3 sm:space-y-3.5">
-                    @foreach ($serviceLinks as [$label, $route])
+                    @foreach ($footerServiceLinks as $link)
                         <li>
-                            <a href="{{ route($route) }}" class="text-sm text-slate-400 hover:text-white transition-colors leading-snug">{{ $label }}</a>
+                            <a href="{{ route($link['route']) }}" class="text-sm text-slate-400 hover:text-white transition-colors leading-snug">{{ $link['label'] }}</a>
                         </li>
                     @endforeach
                 </ul>
@@ -103,9 +99,9 @@
             <div class="col-span-2 xl:col-span-1">
                 <h4 class="text-base font-bold text-white mb-4 sm:mb-5">Legal</h4>
                 <ul class="space-y-3 sm:space-y-3.5">
-                    @foreach ($legalLinks as [$label, $route])
+                    @foreach ($legalLinks as $link)
                         <li>
-                            <a href="{{ route($route) }}" class="text-sm text-slate-400 hover:text-white transition-colors">{{ $label }}</a>
+                            <a href="{{ route($link['route']) }}" class="text-sm text-slate-400 hover:text-white transition-colors">{{ $link['label'] }}</a>
                         </li>
                     @endforeach
                 </ul>
@@ -160,9 +156,9 @@
             <div class="order-1 sm:order-2">
                 <p class="text-sm font-bold text-white mb-3">Follow us</p>
                 <div class="flex items-center gap-2">
-                    @foreach ($socialLinks as [$icon, $label])
-                        <a href="#" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-brand hover:border-brand transition-all" aria-label="{{ $label }}">
-                            <i class="{{ $icon }} text-xs" aria-hidden="true"></i>
+                    @foreach ($socialLinks as $social)
+                        <a href="{{ $social['url'] ?? '#' }}" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-brand hover:border-brand transition-all" aria-label="{{ $social['label'] }}">
+                            <i class="{{ $social['icon'] }} text-xs" aria-hidden="true"></i>
                         </a>
                     @endforeach
                 </div>

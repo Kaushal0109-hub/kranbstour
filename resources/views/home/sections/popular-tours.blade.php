@@ -52,10 +52,7 @@
                             {{ $tour['title'] }}
                         </h3>
                         <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
-                            <p class="text-xl font-extrabold text-ink">
-                                ₹{{ $tour['price'] }}
-                                <span class="text-xs font-normal text-ink-muted">/person</span>
-                            </p>
+                            <x-tour-price :display="$tour['price']" price-class="text-xl" />
                             <span class="bg-brand-50 group-hover:bg-brand text-brand group-hover:text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
                                 View Details
                             </span>

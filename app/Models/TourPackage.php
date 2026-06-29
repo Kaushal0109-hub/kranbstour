@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\CurrencyHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -56,6 +57,21 @@ class TourPackage extends Model
         return $this->hasMany(PackageLocationTag::class, 'package_id')->orderBy('sort_order');
     }
 
+    public function galleryImages(): HasMany
+    {
+        return $this->hasMany(PackageGalleryImage::class, 'package_id')->orderBy('sort_order');
+    }
+
+    public function features(): HasMany
+    {
+        return $this->hasMany(PackageFeature::class, 'package_id')->orderBy('sort_order');
+    }
+
+    public function importantInfos(): HasMany
+    {
+        return $this->hasMany(PackageImportantInfo::class, 'package_id')->orderBy('sort_order');
+    }
+
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class, 'package_id');
@@ -68,6 +84,6 @@ class TourPackage extends Model
 
     public function getPriceFormattedAttribute(): string
     {
-        return $this->price_display ?: number_format($this->price, 0);
+        return CurrencyHelper::formatAmount($this->price, $this->price_display);
     }
 }

@@ -4,7 +4,7 @@
 @section('heading', ($package->exists ? 'Edit' : 'Add').' Tour Package')
 
 @section('content')
-    <form action="{{ $package->exists ? route('admin.master.packages.update', $package) : route('admin.master.packages.store') }}" method="POST" class="max-w-4xl space-y-6">
+    <form action="{{ $package->exists ? route('admin.master.packages.update', $package) : route('admin.master.packages.store') }}" method="POST" enctype="multipart/form-data" class="max-w-4xl space-y-6">
         @csrf
         @if ($package->exists) @method('PUT') @endif
 
@@ -30,7 +30,7 @@
                 <input name="duration" value="{{ old('duration', $package->duration) }}" placeholder="1 Day" required class="w-full px-3 py-2 rounded-xl border border-slate-200">
             </div>
             <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Price (₹) *</label>
+                <label class="block text-xs font-bold text-ink-muted mb-1">Price ($) *</label>
                 <input type="number" step="0.01" name="price" value="{{ old('price', $package->price) }}" required class="w-full px-3 py-2 rounded-xl border border-slate-200">
             </div>
             <div>
@@ -46,8 +46,16 @@
                 <input name="tag" value="{{ old('tag', $package->tag) }}" placeholder="Best Seller" class="w-full px-3 py-2 rounded-xl border border-slate-200">
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-xs font-bold text-ink-muted mb-1">Image Path</label>
-                <input name="image" value="{{ old('image', $package->image) }}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                <x-admin-image-field name="image" label="Main Image" :value="old('image', $package->image)" size="lg" />
+                @if ($package->exists && $package->galleryImages->isNotEmpty())
+                    <x-admin-image-gallery :images="$package->galleryImages" title="Gallery Images" />
+                @endif
+                <div class="mt-4">
+                    <label class="block text-xs font-bold text-ink-muted mb-1">Add Gallery Images</label>
+                    <input type="file" name="gallery_upload[]" accept="image/jpeg,image/png,image/webp,image/gif" multiple
+                           class="block w-full text-sm text-ink-muted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand file:font-semibold hover:file:bg-brand-100">
+                    <p class="text-[10px] text-ink-muted mt-1">Select multiple images to add to package gallery.</p>
+                </div>
             </div>
             <div class="sm:col-span-2">
                 <label class="block text-xs font-bold text-ink-muted mb-1">Summary</label>
@@ -71,42 +79,106 @@
             </div>
             <div class="sm:col-span-2 flex flex-wrap gap-6">
                 <label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $package->is_featured))> Featured on homepage</label>
-                <label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $package->is_active ?? true))> Active</label>
+                <label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $package->is_active ?? true))> Active (visible on website)</label>
             </div>
             <input type="hidden" name="featured_section" value="popular">
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-100 p-6 space-y-6">
             <h3 class="font-bold text-ink">Package Details</h3>
-            <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Highlights (one per line)</label>
-                <textarea name="highlights_text" rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm">{{ old('highlights_text', $package->exists ? $package->highlights->pluck('text')->implode("\n") : '') }}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Itinerary (Title | Description per line)</label>
-                <textarea name="itinerary_text" rows="5" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm">{{ old('itinerary_text', $package->exists ? $package->itineraries->map(fn($i) => $i->title.' | '.$i->description)->implode("\n") : '') }}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Inclusions (one per line)</label>
-                <textarea name="inclusions_text" rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm">{{ old('inclusions_text', $package->exists ? $package->inclusions->pluck('text')->implode("\n") : '') }}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Exclusions (one per line)</label>
-                <textarea name="exclusions_text" rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm">{{ old('exclusions_text', $package->exists ? $package->exclusions->pluck('text')->implode("\n") : '') }}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Location Tags (one per line)</label>
-                <textarea name="location_tags_text" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm">{{ old('location_tags_text', $package->exists ? $package->locationTags->pluck('tag')->implode("\n") : '') }}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">FAQs (Question | Answer per line)</label>
-                <textarea name="faqs_text" rows="5" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm">{{ old('faqs_text', $package->exists ? $package->faqs->map(fn($f) => $f->question.' | '.$f->answer)->implode("\n") : '') }}</textarea>
-            </div>
+
+            <x-admin-repeatable-rows
+                name="highlights"
+                label="Highlights"
+                placeholder="e.g. Sunrise entry, Private guide"
+                :values="$package->exists ? $package->highlights->pluck('text')->all() : []"
+            />
+
+            <x-admin-repeatable-rows
+                name="itinerary"
+                type="pair"
+                label="Itinerary"
+                first-key="title"
+                second-key="description"
+                first-placeholder="Step title"
+                second-placeholder="Step description"
+                :values="$package->exists ? $package->itineraries->map(fn ($i) => ['title' => $i->title, 'description' => $i->description])->all() : []"
+            />
+
+            <x-admin-repeatable-rows
+                name="inclusions"
+                label="Inclusions"
+                placeholder="e.g. Hotel pickup and drop-off"
+                :values="$package->exists ? $package->inclusions->pluck('text')->all() : []"
+            />
+
+            <x-admin-repeatable-rows
+                name="exclusions"
+                label="Exclusions"
+                placeholder="e.g. Monument entry tickets"
+                :values="$package->exists ? $package->exclusions->pluck('text')->all() : []"
+            />
+
+            <x-admin-repeatable-rows
+                name="location_tags"
+                label="Location Tags"
+                placeholder="e.g. Delhi, Agra"
+                :values="$package->exists ? $package->locationTags->pluck('tag')->all() : []"
+            />
+
+            <x-admin-repeatable-rows
+                name="faqs"
+                type="pair"
+                label="FAQs"
+                first-key="question"
+                second-key="answer"
+                first-placeholder="Question"
+                second-placeholder="Answer"
+                :values="$package->exists ? $package->faqs->map(fn ($f) => ['question' => $f->question, 'answer' => $f->answer])->all() : []"
+            />
         </div>
 
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
             <button type="submit" class="px-5 py-2.5 bg-brand text-white font-bold rounded-xl">Save Package</button>
             <a href="{{ route('admin.master.packages.index') }}" class="px-5 py-2.5 border border-slate-200 rounded-xl font-semibold">Cancel</a>
         </div>
     </form>
+
+    @if ($package->exists)
+        <div class="flex justify-end mt-4">
+            <x-admin-delete-form
+                :action="route('admin.master.packages.destroy', $package)"
+                label="Delete Package"
+            />
+        </div>
+    @endif
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('click', function (e) {
+    const addBtn = e.target.closest('[data-repeatable-add]');
+    if (addBtn) {
+        const name = addBtn.dataset.repeatableAdd;
+        const list = document.querySelector('[data-repeatable-list="' + name + '"]');
+        const template = document.querySelector('[data-repeatable-template="' + name + '"]');
+        if (!list || !template) return;
+        list.appendChild(template.content.cloneNode(true));
+        return;
+    }
+
+    const removeBtn = e.target.closest('[data-repeatable-remove]');
+    if (removeBtn) {
+        const row = removeBtn.closest('[data-repeatable-row]');
+        const list = row?.parentElement;
+        if (!row || !list) return;
+        const rows = list.querySelectorAll('[data-repeatable-row]');
+        if (rows.length <= 1) {
+            row.querySelectorAll('input').forEach(function (input) { input.value = ''; });
+            return;
+        }
+        row.remove();
+    }
+});
+</script>
+@endpush

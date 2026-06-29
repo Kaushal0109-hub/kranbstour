@@ -4,7 +4,7 @@
 @section('heading', ($monument->exists ? 'Edit' : 'Add').' Monument')
 
 @section('content')
-    <form action="{{ $monument->exists ? route('admin.master.monuments.update', $monument) : route('admin.master.monuments.store') }}" method="POST" class="max-w-2xl space-y-6">
+    <form action="{{ $monument->exists ? route('admin.master.monuments.update', $monument) : route('admin.master.monuments.store') }}" method="POST" enctype="multipart/form-data" class="max-w-2xl space-y-6">
         @csrf
         @if ($monument->exists) @method('PUT') @endif
 
@@ -26,8 +26,7 @@
                 <textarea name="description" rows="3" class="w-full px-3 py-2 rounded-xl border border-slate-200">{{ old('description', $monument->description) }}</textarea>
             </div>
             <div>
-                <label class="block text-xs font-bold text-ink-muted mb-1">Image Path</label>
-                <input name="image" value="{{ old('image', $monument->image) }}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                <x-admin-image-field name="image" label="Monument Image" :value="old('image', $monument->image)" size="lg" />
             </div>
             <div>
                 <label class="block text-xs font-bold text-ink-muted mb-1">Sort Order</label>
@@ -35,9 +34,15 @@
             </div>
         </div>
 
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
             <button type="submit" class="px-5 py-2.5 bg-brand text-white font-bold rounded-xl">Save</button>
             <a href="{{ route('admin.master.monuments.index') }}" class="px-5 py-2.5 border border-slate-200 rounded-xl font-semibold">Cancel</a>
         </div>
     </form>
+
+    @if ($monument->exists)
+        <div class="flex justify-end mt-4">
+            <x-admin-delete-form :action="route('admin.master.monuments.destroy', $monument)" label="Delete Monument" />
+        </div>
+    @endif
 @endsection

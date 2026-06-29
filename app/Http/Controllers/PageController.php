@@ -3,38 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContactMessage;
+use App\Services\CatalogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PageController extends Controller
 {
-    private array $pages = [
-        'taj-mahal' => ['title' => 'Taj Mahal Tours', 'heading' => 'Taj Mahal Tours'],
-        'jaipur' => ['title' => 'Jaipur Tours', 'heading' => 'Jaipur Tours'],
-        'delhi' => ['title' => 'New Delhi Tours', 'heading' => 'New Delhi Tours'],
-        'golden-triangle' => ['title' => 'Golden Triangle Tours', 'heading' => 'Golden Triangle Tours'],
-        'varanasi' => ['title' => 'Varanasi Tours', 'heading' => 'Varanasi Tours'],
-        'packages' => ['title' => 'Tour Packages', 'heading' => 'Tour Packages'],
-        'taxi' => ['title' => 'Taxi Service & Transfers', 'heading' => 'Taxi Service & Transfers'],
-        'contact' => ['title' => 'Contact Us', 'heading' => 'Contact Us'],
-        'about' => ['title' => 'About Us', 'heading' => 'About Us'],
-        'blog' => ['title' => 'Blog', 'heading' => 'Blog'],
-        'awards' => ['title' => 'Our Awards', 'heading' => 'Our Awards'],
-        'terms' => ['title' => 'Terms of Service', 'heading' => 'Terms of Service'],
-        'privacy' => ['title' => 'Privacy Policy', 'heading' => 'Privacy Policy'],
-        'login' => ['title' => 'Login', 'heading' => 'Login'],
-    ];
-
-    public function tour(string $category): View
-    {
-        abort_unless(isset($this->pages[$category]), 404);
-
-        return view('pages.placeholder', [
-            'title' => $this->pages[$category]['title'],
-            'heading' => $this->pages[$category]['heading'],
-        ]);
-    }
+    public function __construct(private CatalogService $catalog) {}
 
     public function contact(): View
     {
@@ -55,7 +31,7 @@ class PageController extends Controller
 
         ContactMessage::create($validated);
 
-        return back()->with('success', 'Thank you, ' . $validated['name'] . '! We received your enquiry and will reply within 2 hours.');
+        return back()->with('success', 'Thank you, '.$validated['name'].'! We received your enquiry and will reply within 2 hours.');
     }
 
     public function destination(string $slug): View
@@ -70,19 +46,25 @@ class PageController extends Controller
 
     public function page(string $slug): View
     {
-        abort_unless(isset($this->pages[$slug]), 404);
+        $cms = $this->catalog->cmsPage($slug);
 
-        return view('pages.placeholder', [
-            'title' => $this->pages[$slug]['title'],
-            'heading' => $this->pages[$slug]['heading'],
-        ]);
+        if ($cms) {
+            return view('pages.cms', array_merge($cms, ['slug' => $slug]));
+        }
+
+        abort(404);
     }
 
     public function search(Request $request): View
     {
         $query = trim((string) $request->query('q', ''));
+        $results = $this->catalog->search($query);
 
-        return view('pages.search', compact('query'));
+        return view('pages.search', [
+            'query' => $query,
+            'packages' => $results['packages'],
+            'categories' => $results['categories'],
+        ]);
     }
 
     public function subscribeNewsletter(Request $request): RedirectResponse
@@ -91,6 +73,6 @@ class PageController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        return back()->with('success', 'Thank you for subscribing with ' . $validated['email'] . '!');
+        return back()->with('success', 'Thank you for subscribing with '.$validated['email'].'!');
     }
 }

@@ -13,6 +13,10 @@ class MediaHelper
             return $path;
         }
 
+        if (str_starts_with($path, '/')) {
+            return asset(ltrim($path, '/'));
+        }
+
         $normalized = str_starts_with($path, 'images/')
             ? $path
             : 'images/' . ltrim($path, '/');

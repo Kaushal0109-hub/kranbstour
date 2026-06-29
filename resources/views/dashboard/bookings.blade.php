@@ -30,8 +30,9 @@
                                 </td>
                                 <td class="px-6 py-4 text-ink-muted">{{ $booking->travel_date?->format('d M Y') ?? '—' }}</td>
                                 <td class="px-6 py-4">{{ $booking->travelers }}</td>
-                                <td class="px-6 py-4 font-bold">₹{{ $booking->price }}</td>
+                                <td class="px-6 py-4 font-bold">{{ \App\Helpers\CurrencyHelper::formatAmount($booking->total_amount ?: $booking->price) }}</td>
                                 <td class="px-6 py-4">
+                                    <p class="text-[10px] text-ink-muted mb-1">{{ $booking->paymentStatusLabel() }}</p>
                                     <span @class([
                                         'text-[10px] font-bold uppercase px-2.5 py-1 rounded-full',
                                         'bg-amber-50 text-amber-700' => $booking->status === 'pending',

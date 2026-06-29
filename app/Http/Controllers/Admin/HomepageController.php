@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesImageUploads;
 use App\Http\Controllers\Controller;
+use App\Models\HomeHero;
 use App\Models\HomeHighlight;
 use App\Models\HomeStat;
 use App\Models\Testimonial;
@@ -12,9 +14,11 @@ use Illuminate\View\View;
 
 class HomepageController extends Controller
 {
+    use HandlesImageUploads;
     public function index(): View
     {
         return view('admin.master.homepage.index', [
+            'hero' => HomeHero::query()->where('is_active', true)->first(),
             'stats' => HomeStat::query()->orderBy('sort_order')->get(),
             'highlights' => HomeHighlight::query()->orderBy('sort_order')->get(),
             'testimonials' => Testimonial::query()->orderBy('sort_order')->get(),
@@ -72,7 +76,7 @@ class HomepageController extends Controller
 
     public function updateTestimonial(Request $request, Testimonial $testimonial): RedirectResponse
     {
-        $testimonial->update($this->testimonialData($request));
+        $testimonial->update($this->testimonialData($request, $testimonial));
 
         return back()->with('success', 'Testimonial updated.');
     }
@@ -113,7 +117,7 @@ class HomepageController extends Controller
         return $data;
     }
 
-    private function testimonialData(Request $request): array
+    private function testimonialData(Request $request, ?Testimonial $testimonial = null): array
     {
         $data = $request->validate([
             'quote' => ['required', 'string'],
@@ -133,6 +137,6 @@ class HomepageController extends Controller
         $data['is_active'] = $request->boolean('is_active', true);
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
-        return $data;
+        return $this->mergeUploadedImages($request, $data, ['avatar_image'], 'avatars', $testimonial);
     }
 }

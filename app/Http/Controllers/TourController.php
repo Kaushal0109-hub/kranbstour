@@ -30,11 +30,11 @@ class TourController extends Controller
         abort_unless($data, 404);
 
         $relatedPackages = collect($data['category']['tours'] ?? [])
-            ->filter(fn ($p) => TourCatalog::slugify($p['title']) !== $packageSlug)
+            ->filter(fn ($p) => ($p['slug'] ?? TourCatalog::slugify($p['title'])) !== $packageSlug)
             ->take(3)
             ->map(fn ($p) => array_merge(MediaHelper::resolve($p), [
-                'slug' => TourCatalog::slugify($p['title']),
-                'url' => TourCatalog::packageUrl($category, $p['title']),
+                'slug' => $p['slug'] ?? TourCatalog::slugify($p['title']),
+                'url' => TourCatalog::packageUrl($category, $p),
             ]))
             ->values()
             ->all();
@@ -58,5 +58,25 @@ class TourController extends Controller
         $allTours = $this->catalog->allPackages()->all();
 
         return view('tours.packages', compact('categories', 'allTours'));
+    }
+
+    public function monument(string $category, string $monumentSlug): View
+    {
+        $data = $this->catalog->findMonument($category, $monumentSlug);
+        abort_unless($data, 404);
+
+        $tours = collect($data['category']['tours'] ?? [])
+            ->take(3)
+            ->map(fn ($p) => array_merge($p, [
+                'url' => $p['url'] ?? TourCatalog::packageUrl($category, $p),
+            ]))
+            ->all();
+
+        return view('tours.monument', [
+            'category' => $data['category'],
+            'monument' => $data['monument'],
+            'categorySlug' => $category,
+            'relatedTours' => $tours,
+        ]);
     }
 }

@@ -1,14 +1,18 @@
 <section class="py-16 bg-white" aria-labelledby="spotlight-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center max-w-2xl mx-auto mb-12">
-            <span class="text-brand text-xs font-bold uppercase tracking-widest">Delhi & Agra</span>
+            @if (!empty($spotlightSection['badge']))
+                <span class="text-brand text-xs font-bold uppercase tracking-widest">{{ $spotlightSection['badge'] }}</span>
+            @endif
             <h2 id="spotlight-heading" class="text-2xl sm:text-3xl font-extrabold text-ink mt-2 tracking-tight">
-                Where most travelers start
+                {{ $spotlightSection['title'] ?? 'Where most travelers start' }}
             </h2>
-            <p class="text-ink-muted text-sm mt-2">Capital heritage meets the Taj — our two most booked destinations</p>
+            @if (!empty($spotlightSection['subtitle']))
+                <p class="text-ink-muted text-sm mt-2">{{ $spotlightSection['subtitle'] }}</p>
+            @endif
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-6 lg:gap-8">
+        <div class="grid md:grid-cols2 lg:grid-cols-3 gap-6 lg:gap-8">
             @foreach ($spotlightCities as $spot)
                 <div class="rounded-3xl overflow-hidden border border-slate-100 shadow-soft bg-surface flex flex-col">
                     {{-- City header --}}
@@ -18,9 +22,9 @@
                         <div class="absolute inset-0 bg-gradient-to-r from-ink/85 to-ink/30"></div>
                         <div class="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
                             <div class="flex items-center gap-3 mb-2">
-                                <span class="w-11 h-11 bg-brand rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                                <!-- <span class="w-11 h-11 bg-brand rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
                                     <i class="fas {{ $spot['icon'] }}" aria-hidden="true"></i>
-                                </span>
+                                </span> -->
                                 <div>
                                     <p class="text-brand-100 text-xs font-semibold uppercase tracking-wider">{{ $spot['tagline'] }}</p>
                                     <h3 class="text-2xl font-extrabold text-white">{{ $spot['name'] }} Tours</h3>
@@ -47,7 +51,7 @@
                                         <span class="text-[10px] text-ink-muted">{{ $tour['duration'] }}</span>
                                     </div>
                                     <p class="text-sm font-bold text-ink truncate group-hover:text-brand transition-colors">{{ $tour['title'] }}</p>
-                                    <p class="text-sm font-extrabold text-brand mt-1">₹{{ $tour['price'] }} <span class="text-[10px] font-normal text-ink-muted">/person</span></p>
+                                    <x-tour-price :display="$tour['price']" price-class="text-sm text-brand" suffix-class="text-[10px]" />
                                 </div>
                                 <i class="fas fa-chevron-right text-slate-300 group-hover:text-brand text-xs shrink-0" aria-hidden="true"></i>
                             </a>

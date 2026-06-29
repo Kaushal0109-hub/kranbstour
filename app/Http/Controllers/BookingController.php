@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CurrencyHelper;
 use App\Models\Booking;
 use App\Services\TourCatalog;
 use Illuminate\Http\RedirectResponse;
@@ -33,7 +34,7 @@ class BookingController extends Controller
             'package_slug' => $validated['package_slug'],
             'package_title' => $package['title'],
             'city' => $category['city'],
-            'price' => $package['price'],
+            'price' => CurrencyHelper::formatAmount(null, $package['price']),
             'travel_date' => $validated['travel_date'] ?? null,
             'travelers' => $validated['travelers'],
             'status' => 'pending',

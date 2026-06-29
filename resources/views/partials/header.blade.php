@@ -1,14 +1,13 @@
 @php
-    $navLinks = [
-        ['label' => 'Home', 'route' => 'home'],
-        ['label' => 'Taj Mahal Tours', 'route' => 'tours.taj-mahal'],
-        ['label' => 'Jaipur Tours', 'route' => 'tours.jaipur'],
-        ['label' => 'New Delhi Tours', 'route' => 'tours.delhi'],
-        ['label' => 'Golden Triangle', 'route' => 'tours.golden-triangle'],
-        ['label' => 'Varanasi Tours', 'route' => 'tours.varanasi'],
-        ['label' => 'Tour Packages', 'route' => 'tours.packages'],
-        ['label' => 'Contact Us', 'route' => 'contact'],
-    ];
+    $navTourLinks = $navTourLinks ?? [];
+    $navLinks = array_merge(
+        [['label' => 'Home', 'route' => 'home']],
+        $navTourLinks,
+        [
+            ['label' => 'Tour Packages', 'route' => 'tours.packages'],
+            ['label' => 'Contact Us', 'route' => 'contact'],
+        ]
+    );
     $currentRoute = Route::currentRouteName();
 @endphp
 
@@ -47,7 +46,7 @@
                 </form>
             @else
                 <a href="{{ route('login') }}"
-                   class="btn-brand text-white text-xs sm:text-sm font-bold px-4 sm:px-5 py-2.5 rounded-lg">
+                   class="hidden lg:inline-flex btn-brand text-white text-xs sm:text-sm font-bold px-4 sm:px-5 py-2.5 rounded-lg">
                     Login
                 </a>
             @endauth
@@ -74,6 +73,14 @@
                     </a>
                 </li>
             @endforeach
+            @guest
+                <li class="border-t border-slate-100 pt-3 mt-2">
+                    <a href="{{ route('login') }}"
+                       class="block w-full text-center btn-brand text-white text-sm font-bold px-4 py-3 rounded-xl">
+                        Login
+                    </a>
+                </li>
+            @endguest
             @auth
                 <li class="border-t border-slate-100 pt-2 mt-2">
                     @if (auth()->user()->isAdmin())
@@ -81,14 +88,6 @@
                     @else
                         <a href="{{ route('dashboard.index') }}" class="block px-3 py-2.5 rounded-lg text-sm font-semibold text-ink-muted hover:text-brand hover:bg-brand-50">My Account</a>
                     @endif
-                    <form action="{{ route('logout') }}" method="POST" class="px-3 py-2">
-                        @csrf
-                        <button type="submit" class="text-sm font-semibold text-red-600">Logout</button>
-                    </form>
-                </li>
-            @else
-                <li class="border-t border-slate-100 pt-2 mt-2 px-3">
-                    <a href="{{ route('login') }}" class="btn-brand block text-center text-white text-sm font-bold py-2.5 rounded-lg">Login</a>
                 </li>
             @endauth
         </ul>

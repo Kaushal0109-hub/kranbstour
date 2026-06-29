@@ -35,7 +35,7 @@
                 @forelse ($recentBookings as $booking)
                     <div class="px-6 py-4">
                         <p class="font-bold text-sm text-ink">{{ $booking->package_title }}</p>
-                        <p class="text-xs text-ink-muted">{{ $booking->user->name }} · ₹{{ $booking->price }}</p>
+                        <p class="text-xs text-ink-muted">{{ $booking->user?->name ?? $booking->customerDisplayName() }} · {{ \App\Helpers\CurrencyHelper::formatAmount($booking->total_amount ?: $booking->price) }}</p>
                     </div>
                 @empty
                     <p class="px-6 py-8 text-sm text-ink-muted text-center">No bookings yet.</p>

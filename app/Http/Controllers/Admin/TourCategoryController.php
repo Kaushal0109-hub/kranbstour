@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesImageUploads;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\TourCategory;
@@ -12,6 +13,7 @@ use Illuminate\View\View;
 
 class TourCategoryController extends Controller
 {
+    use HandlesImageUploads;
     public function index(): View
     {
         return view('admin.master.categories.index', [
@@ -75,12 +77,15 @@ class TourCategoryController extends Controller
             'map_query' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
+            'show_in_nav' => ['nullable', 'boolean'],
+            'nav_label' => ['nullable', 'string', 'max:150'],
         ]);
 
         $data['route_name'] = $data['route_name'] ?: TourCatalog::routeForSlug($data['slug']);
         $data['is_active'] = $request->boolean('is_active', true);
+        $data['show_in_nav'] = $request->boolean('show_in_nav', true);
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
-        return $data;
+        return $this->mergeUploadedImages($request, $data, ['banner_image', 'card_image'], 'categories', $category);
     }
 }

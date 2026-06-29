@@ -30,5 +30,6 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call(TourMasterSeeder::class);
+        $this->call(PaymentGatewaySeeder::class);
     }
 }

@@ -1,13 +1,15 @@
 <section class="py-14 sm:py-20 bg-gradient-to-b from-white to-surface-alt" aria-labelledby="story-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-            <span class="bg-brand-50 text-brand text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">Why {{ config('site.name') }}?</span>
+            @if (!empty($storySection['badge']))
+                <span class="bg-brand-50 text-brand text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">{{ $storySection['badge'] }}</span>
+            @endif
             <h2 id="story-heading" class="text-2xl sm:text-3xl font-extrabold text-ink mt-4 tracking-tight">
-                Your trusted North India tour partner
+                {{ $storySection['title'] ?? 'Your trusted North India tour partner' }}
             </h2>
-            <p class="text-ink-muted text-sm mt-3 leading-relaxed">
-                Local experts, private tours & honest pricing — everything you need for a hassle-free trip.
-            </p>
+            @if (!empty($storySection['subtitle']))
+                <p class="text-ink-muted text-sm mt-3 leading-relaxed">{{ $storySection['subtitle'] }}</p>
+            @endif
         </div>
 
         {{-- Mobile: horizontal scroll --}}

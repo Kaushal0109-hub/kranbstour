@@ -45,16 +45,10 @@ class CustomerDashboardController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
         $user->name = $validated['name'];
         $user->phone = $validated['phone'] ?? null;
-
-        if (! empty($validated['password'])) {
-            $user->password = $validated['password'];
-        }
-
         $user->save();
 
         return back()->with('success', 'Profile updated successfully.');

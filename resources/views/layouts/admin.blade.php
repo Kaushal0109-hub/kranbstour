@@ -26,14 +26,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @vite(['resources/css/app.css'])
 </head>
-<body class="bg-surface text-ink antialiased min-h-screen">
+<body class="bg-surface text-ink antialiased min-h-screen" data-asset-base="{{ rtrim(asset(''), '/') }}">
     <div class="min-h-screen flex flex-col lg:flex-row">
-        <aside class="lg:w-64 bg-ink text-white shrink-0">
-            <div class="p-5 border-b border-white/10">
+        <aside class="lg:w-64 bg-ink text-white shrink-0 lg:sticky lg:top-0 lg:h-screen lg:flex lg:flex-col lg:overflow-hidden">
+            <div class="p-5 border-b border-white/10 shrink-0">
                 @include('partials.logo', ['variant' => 'dark'])
                 <p class="text-xs text-slate-400 mt-3 font-semibold uppercase tracking-wider">Admin Panel</p>
             </div>
-            <nav class="p-4 space-y-1">
+            <nav class="admin-sidebar-scroll p-4 space-y-1 lg:flex-1 lg:overflow-y-auto lg:min-h-0">
                 @foreach ([
                     ['Dashboard', 'admin.dashboard', 'fa-chart-line'],
                     ['Bookings', 'admin.bookings', 'fa-suitcase'],
@@ -57,7 +57,12 @@
                     ['Categories', 'admin.master.categories.*', 'admin.master.categories.index', 'fa-folder'],
                     ['Packages', 'admin.master.packages.*', 'admin.master.packages.index', 'fa-box-open'],
                     ['Monuments', 'admin.master.monuments.*', 'admin.master.monuments.index', 'fa-monument'],
+                    ['Blog Posts', 'admin.master.blog-posts.*', 'admin.master.blog-posts.index', 'fa-newspaper'],
+                    ['CMS Pages', 'admin.master.cms-pages.*', 'admin.master.cms-pages.index', 'fa-file-alt'],
                     ['Homepage', 'admin.master.homepage.*', 'admin.master.homepage.index', 'fa-home'],
+                    ['Payment Gateways', 'admin.master.payment-gateways.*', 'admin.master.payment-gateways.index', 'fa-credit-card'],
+                    ['Maps API', 'admin.master.maps-settings.*', 'admin.master.maps-settings.edit', 'fa-map-marker-alt'],
+                    ['Google Login', 'admin.master.auth-settings.*', 'admin.master.auth-settings.edit', 'fa-google'],
                     ['Settings', 'admin.master.settings.*', 'admin.master.settings.edit', 'fa-cog'],
                 ] as [$label, $routePattern, $route, $icon])
                     <a href="{{ route($route) }}"
@@ -75,7 +80,7 @@
                     View Website
                 </a>
             </nav>
-            <div class="p-4 border-t border-white/10">
+            <div class="p-4 border-t border-white/10 shrink-0 mt-auto">
                 <form action="{{ route('admin.logout') }}" method="POST">
                     @csrf
                     <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-300 hover:bg-red-500/10 transition-colors">
@@ -103,5 +108,65 @@
             </main>
         </div>
     </div>
+    <script>
+        (function () {
+            function resolveImageUrl(path) {
+                if (!path) return '';
+                if (/^https?:\/\//i.test(path)) return path;
+                const base = document.body.dataset.assetBase || '';
+                if (path.startsWith('/')) return base + path;
+                const normalized = path.startsWith('images/') ? path : 'images/' + path.replace(/^\//, '');
+                return base + '/' + normalized;
+            }
+
+            function updatePreview(name, path) {
+                const img = document.querySelector('[data-preview-img="' + name + '"]');
+                const placeholder = document.querySelector('[data-preview-placeholder="' + name + '"]');
+                if (!img) return;
+
+                const val = (path || '').trim();
+                if (!val) {
+                    img.classList.add('hidden');
+                    img.removeAttribute('src');
+                    placeholder?.classList.remove('hidden');
+                    return;
+                }
+
+                img.onload = function () {
+                    img.classList.remove('hidden');
+                    placeholder?.classList.add('hidden');
+                };
+                img.onerror = function () {
+                    img.classList.add('hidden');
+                    placeholder?.classList.remove('hidden');
+                };
+                img.src = resolveImageUrl(val);
+            }
+
+            document.addEventListener('change', function (e) {
+                if (!e.target.classList.contains('admin-image-file')) return;
+                const name = e.target.dataset.previewFor;
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (ev) {
+                    const img = document.querySelector('[data-preview-img="' + name + '"]');
+                    const placeholder = document.querySelector('[data-preview-placeholder="' + name + '"]');
+                    if (img) {
+                        img.src = ev.target.result;
+                        img.classList.remove('hidden');
+                        placeholder?.classList.add('hidden');
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+
+            document.querySelectorAll('.admin-image-path').forEach(function (input) {
+                updatePreview(input.dataset.previewFor, input.value);
+            });
+        })();
+    </script>
+    @stack('scripts')
 </body>
 </html>
